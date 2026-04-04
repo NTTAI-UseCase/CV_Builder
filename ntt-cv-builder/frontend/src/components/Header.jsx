@@ -67,21 +67,6 @@ export default function Header({ connected, stage, cvData, theme, onToggleTheme 
         </div>
       </div>
 
-      {/* Stage pill */}
-      <div style={{
-        marginLeft: 16,
-        background: 'var(--surface2)',
-        border: '1px solid var(--border2)',
-        borderRadius: 20,
-        padding: '5px 16px',
-        fontSize: 12,
-        fontFamily: "'JetBrains Mono', monospace",
-        color: stage === 'done' ? 'var(--teal)' : 'var(--text2)',
-        fontWeight: 500,
-      }}>
-        {STAGE_LABELS[stage] || stage}
-      </div>
-
       <div style={{ flex: 1 }} />
 
       {/* CV Completion ring */}

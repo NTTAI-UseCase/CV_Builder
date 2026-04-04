@@ -146,29 +146,56 @@ async def extract_cv_from_text(
         raise
 
 
+_PRESENT_ALIASES = {
+    "till date", "tilldate", "till now", "tillnow", "to date",
+    "todate", "to present", "present", "current", "ongoing",
+    "now", "today", "till today",
+}
+
+
+def _normalise_end(value: str) -> str:
+    return "present" if value.lower().strip() in _PRESENT_ALIASES else value
+
+
+def _parse_date_range(dr) -> "DateRange | None":
+    """Safely parse a date_range value that may be a dict or a plain string."""
+    if not dr:
+        return None
+    if isinstance(dr, dict):
+        end = dr.get("end")
+        if end:
+            dr = {**dr, "end": _normalise_end(str(end))}
+        return DateRange(**dr)
+    if isinstance(dr, str):
+        for sep in (' - ', ' – ', ' to ', ' till ', ' until ', '-'):
+            if sep.lower() in dr.lower():
+                parts = dr.lower().split(sep.lower(), 1)
+                return DateRange(start=parts[0].strip(), end=_normalise_end(parts[1].strip()))
+        return DateRange(start=dr.strip())
+    return None
+
+
 def _dict_to_cv_data(data: dict) -> CVData:
     """Convert raw extracted dict to validated CVData."""
     # Handle nested objects
     work_exp = []
     for w in data.get("work_experience", []):
-        dr = w.get("date_range", {})
         work_exp.append(WorkExperience(
             job_title=w.get("job_title"),
             company=w.get("company"),
             location=w.get("location"),
-            date_range=DateRange(**dr) if dr else None,
+            date_range=_parse_date_range(w.get("date_range")),
             bullets=w.get("bullets", []),
             technologies=w.get("technologies", []),
         ))
 
     education = []
     for e in data.get("education", []):
-        dr = e.get("date_range", {})
         education.append(Education(
             degree=e.get("degree"),
             institution=e.get("institution"),
             location=e.get("location"),
-            date_range=DateRange(**dr) if dr else None,
+            date_range=_parse_date_range(e.get("date_range")),
             grade=e.get("grade"),
             highlights=e.get("highlights", []),
         ))

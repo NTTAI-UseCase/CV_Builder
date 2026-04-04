@@ -123,6 +123,43 @@ async def run_triage_agent(
         raise
 
 
+_PRESENT_ALIASES = {
+    "till date", "tilldate", "till now", "tillnow", "to date",
+    "todate", "to present", "present", "current", "ongoing",
+    "now", "today", "till today",
+}
+
+
+def _normalise_end(value: str) -> str:
+    """Normalise any 'till date' style value to 'present'."""
+    return "present" if value.lower().strip() in _PRESENT_ALIASES else value
+
+
+def _sanitise_date_range(dr):
+    """Convert any date_range value to a dict DateRange can accept."""
+    if not dr or isinstance(dr, dict):
+        if isinstance(dr, dict) and "end" in dr and dr["end"]:
+            dr = {**dr, "end": _normalise_end(str(dr["end"]))}
+        return dr
+    if isinstance(dr, str):
+        for sep in (' - ', ' – ', ' to ', ' till ', ' until ', '-'):
+            if sep.lower() in dr.lower():
+                parts = dr.lower().split(sep.lower(), 1)
+                return {"start": parts[0].strip(), "end": _normalise_end(parts[1].strip())}
+        return {"start": dr.strip()}
+    return dr
+
+
+def _sanitise_entries(entries: list) -> list:
+    """Sanitise date_range in a list of work_experience or education dicts."""
+    result = []
+    for item in entries:
+        if isinstance(item, dict) and "date_range" in item:
+            item = {**item, "date_range": _sanitise_date_range(item["date_range"])}
+        result.append(item)
+    return result
+
+
 def _merge_cv_data(existing: CVData, extracted: dict) -> CVData:
     """Merge newly extracted fields into existing CV data (non-destructive)."""
     if not extracted:
@@ -146,6 +183,16 @@ def _merge_cv_data(existing: CVData, extracted: dict) -> CVData:
             current[key].append(value)
         elif current[key] is None or current[key] == "":
             current[key] = value
-        # Don't overwrite existing non-null values unless explicitly empty
 
-    return CVData.model_validate(current)
+    # Sanitise date_range fields before validation
+    for section in ("work_experience", "education"):
+        if isinstance(current.get(section), list):
+            current[section] = _sanitise_entries(current[section])
+
+    try:
+        return CVData.model_validate(current)
+    except Exception:
+        # If the merged data still fails validation, return the existing CV
+        # unchanged so the conversation can continue uninterrupted.
+        logger.warning("CV data validation failed after merge — keeping existing data")
+        return existing

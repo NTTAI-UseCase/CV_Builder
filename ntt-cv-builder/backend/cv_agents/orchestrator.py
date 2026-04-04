@@ -52,7 +52,11 @@ class CVOrchestrator:
                     yield event
 
         except Exception as e:
-            yield {"type": "error", "data": f"I encountered an issue. Please try again. ({str(e)})"}
+            import logging
+            logging.getLogger(__name__).error("Orchestrator error: %s", e)
+            msg = "Sorry, something went wrong on my end. Could you try rephrasing your last message?"
+            self.session.add_message("assistant", msg)
+            yield {"type": "message", "data": msg}
 
     async def process_uploaded_cv(self, text: str) -> AsyncIterator[dict]:
         """Process raw text extracted from an uploaded CV file."""

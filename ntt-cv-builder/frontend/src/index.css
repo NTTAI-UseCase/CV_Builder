@@ -74,11 +74,12 @@ body {
 }
 
 /* ── Visible scrollbar ────────────────────────────────── */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: var(--surface3); border-radius: 10px; }
 ::-webkit-scrollbar-thumb {
   background: var(--scrollbar-thumb);
   border-radius: 10px;
+  border: 2px solid var(--surface3);
 }
 ::-webkit-scrollbar-thumb:hover {
   background: var(--scrollbar-hover);

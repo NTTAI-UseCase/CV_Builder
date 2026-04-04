@@ -196,46 +196,14 @@ export default function ChatPanel({
     <div style={{
       display: 'flex', flexDirection: 'column',
       height: '100%',
+      minHeight: 0,
+      overflow: 'hidden',
       width: 'var(--chat-w)',
       minWidth: 'var(--chat-w)',
+      maxWidth: 'var(--chat-w)',
       background: 'var(--surface)',
       borderRight: '1px solid var(--border)',
     }}>
-
-      {/* Header */}
-      <div style={{
-        height: 'var(--header-h)', padding: '0 16px',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        borderBottom: '1px solid var(--border)',
-        background: 'var(--surface)',
-        flexShrink: 0,
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{
-            width: 32, height: 32, borderRadius: 9,
-            background: 'linear-gradient(135deg, #00c896, #0084c4)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 16,
-          }}>✨</div>
-          <div>
-            <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)', lineHeight: 1.2 }}>
-              NTT Data CV Builder
-            </div>
-            <div style={{ fontSize: 10.5, color: 'var(--text3)', fontFamily: "'JetBrains Mono',monospace" }}>
-              AI-powered · Phase 1 MVP
-            </div>
-          </div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <StageChip stage={stage} />
-          <div style={{
-            width: 8, height: 8, borderRadius: '50%',
-            background: connected ? 'var(--teal)' : '#f43f5e',
-            boxShadow: connected ? '0 0 6px var(--teal)' : 'none',
-            transition: 'background 0.3s',
-          }} title={connected ? 'Connected' : 'Disconnected'} />
-        </div>
-      </div>
 
       {/* Upload zone — always visible at top */}
       <div style={{ flexShrink: 0 }}>
@@ -256,11 +224,13 @@ export default function ChatPanel({
 
       {/* Messages */}
       <div style={{
-        flex: 1, minHeight: 0, overflowY: 'scroll',
-        display: 'flex', flexDirection: 'column',
-        gap: 2, padding: '12px 0 8px',
-        scrollbarWidth: 'thin',
-        scrollbarColor: 'var(--scrollbar-thumb) transparent',
+        flex: 1,
+        minHeight: 0,
+        overflowY: 'scroll',
+        overflowX: 'hidden',
+        padding: '12px 0 8px',
+        scrollbarWidth: 'auto',
+        scrollbarColor: 'var(--scrollbar-thumb) var(--surface3)',
       }}>
         {messages.map((msg, i) => (
           <Message key={i} msg={msg} />
@@ -409,7 +379,7 @@ export default function ChatPanel({
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           fontFamily: "'JetBrains Mono', monospace",
         }}>
-          <span>Shift+Enter for new line · {connected ? '🟢 Connected' : '🔴 Reconnecting...'}</span>
+          <span>Shift+Enter for new line</span>
 
           {/* Auto-speak toggle */}
           {voice?.outputSupported && (
