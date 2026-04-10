@@ -136,6 +136,7 @@ function StageChip({ stage }) {
   )
 }
 
+
 export default function ChatPanel({
   messages,
   stage,
@@ -143,6 +144,8 @@ export default function ChatPanel({
   connected,
   onSend,
   onUploadComplete,
+  onClearChat,
+  onNewChat,
   isThinking,
   voice,
 }) {
@@ -205,18 +208,45 @@ export default function ChatPanel({
       borderRight: '1px solid var(--border)',
     }}>
 
-      {/* Upload zone — always visible at top */}
+      {/* Upload zone + action buttons */}
       <div style={{ flexShrink: 0 }}>
-        <UploadZone
-          sessionId={sessionId}
-          onUploadComplete={handleUploadComplete}
-          onError={setUploadError}
-        />
+        <div style={{ padding: '8px 12px 0' }}>
+          <UploadZone
+            sessionId={sessionId}
+            onUploadComplete={handleUploadComplete}
+            onError={setUploadError}
+          />
+        </div>
         {uploadError && (
           <div style={{ margin: '-4px 12px 4px', fontSize: 11, color: '#fb7185', padding: '4px 8px' }}>
             ⚠ {uploadError}
           </div>
         )}
+        {/* Chat action buttons */}
+        <div style={{ display: 'flex', gap: 8, padding: '0 12px 8px' }}>
+          <button
+            onClick={onClearChat}
+            title="Clear chat messages (keeps CV data)"
+            style={{
+              flex: 1, padding: '5px 10px', borderRadius: 7, fontSize: 11, fontWeight: 600,
+              background: 'var(--surface2)', border: '1px solid var(--border2)',
+              color: 'var(--text2)', cursor: 'pointer',
+            }}
+          >
+            🗑 Clear Chat
+          </button>
+          <button
+            onClick={onNewChat}
+            title="Start a completely new session"
+            style={{
+              flex: 1, padding: '5px 10px', borderRadius: 7, fontSize: 11, fontWeight: 600,
+              background: 'var(--surface2)', border: '1px solid var(--border2)',
+              color: 'var(--text2)', cursor: 'pointer',
+            }}
+          >
+            ＋ New Chat
+          </button>
+        </div>
       </div>
 
       {/* Divider */}

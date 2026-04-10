@@ -6,29 +6,36 @@
 import { useEffect, useRef, useCallback, useState } from 'react'
 
 const WS_BASE = import.meta.env.VITE_WS_URL || `ws://${window.location.host}/ws`
-const RECONNECT_DELAY = 2000
-const MAX_RECONNECTS = 5
+
+// Exponential backoff: 1s, 2s, 4s, 8s, 16s, then cap at 30s
+function backoffDelay(attempt) {
+  return Math.min(1000 * Math.pow(2, attempt), 30000)
+}
 
 export function useWebSocket({ sessionId, onEvent }) {
   const wsRef = useRef(null)
   const reconnectCount = useRef(0)
   const reconnectTimer = useRef(null)
+  const connIdRef = useRef(0)   // Incremented on every connect; stale onclose handlers bail out
   const [connected, setConnected] = useState(false)
   const onEventRef = useRef(onEvent)
   onEventRef.current = onEvent
 
   const connect = useCallback(() => {
     if (!sessionId) return
-    if (wsRef.current?.readyState === WebSocket.OPEN) return
+    // Don't open a second socket if one is already open or connecting
+    const state = wsRef.current?.readyState
+    if (state === WebSocket.OPEN || state === WebSocket.CONNECTING) return
 
+    const myId = ++connIdRef.current
     const url = `${WS_BASE}/${sessionId}`
     const ws = new WebSocket(url)
     wsRef.current = ws
 
     ws.onopen = () => {
+      if (connIdRef.current !== myId) return   // Superseded by a newer connection
       setConnected(true)
       reconnectCount.current = 0
-      console.log('[WS] Connected', sessionId)
     }
 
     ws.onmessage = (evt) => {
@@ -41,24 +48,26 @@ export function useWebSocket({ sessionId, onEvent }) {
     }
 
     ws.onclose = () => {
+      if (connIdRef.current !== myId) return   // We already moved on; don't reconnect
       setConnected(false)
-      console.log('[WS] Closed')
-      if (reconnectCount.current < MAX_RECONNECTS) {
+      const delay = backoffDelay(reconnectCount.current)
+      reconnectTimer.current = setTimeout(() => {
         reconnectCount.current++
-        reconnectTimer.current = setTimeout(connect, RECONNECT_DELAY)
-      }
+        connect()
+      }, delay)
     }
 
-    ws.onerror = (e) => {
-      console.error('[WS] Error', e)
-    }
+    ws.onerror = () => { /* onclose fires next; reconnect is handled there */ }
   }, [sessionId])
 
   useEffect(() => {
     connect()
     return () => {
+      // Invalidate this connection's onclose so it never schedules a reconnect
+      connIdRef.current++
       clearTimeout(reconnectTimer.current)
       wsRef.current?.close()
+      wsRef.current = null
     }
   }, [connect])
 

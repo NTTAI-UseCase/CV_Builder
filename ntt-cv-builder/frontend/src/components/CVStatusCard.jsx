@@ -5,8 +5,8 @@
  */
 
 const FIELDS = [
-  { key: 'name',       label: 'Name',              check: cv => !!cv.contact?.full_name },
-  { key: 'email',      label: 'Email',             check: cv => !!cv.contact?.email },
+  { key: 'name',       label: 'Name',              check: cv => !!cv.full_name },
+  { key: 'email',      label: 'Email',             check: cv => !!cv.email },
   { key: 'summary',    label: 'Summary',           check: cv => !!cv.professional_summary },
   { key: 'experience', label: 'Work experience',   check: cv => (cv.work_experience?.length || 0) > 0 },
   { key: 'education',  label: 'Education',         check: cv => (cv.education?.length || 0) > 0 },

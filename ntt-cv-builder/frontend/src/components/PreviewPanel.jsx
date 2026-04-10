@@ -6,17 +6,19 @@
 import { useState, useCallback } from 'react'
 import CVPreview from './CVPreview'
 import { downloadPDF, downloadDOCX, triggerDownload } from '../lib/api'
+import { TEMPLATE_DEFAULTS } from '../lib/templateDefaults'
 
-export default function PreviewPanel({ cvData, previewHtml, downloads, stage }) {
+export default function PreviewPanel({ cvData, previewHtml, downloads, stage, templateConfigs, activeTemplate: activeTemplateProp, customTemplates, onTemplateChange, onConfigChange }) {
   const [dlStatus, setDlStatus] = useState({ pdf: 'idle', docx: 'idle', json: 'idle' })
-  const [activeTemplate, setActiveTemplate] = useState(cvData?.selected_template || 'professional')
+  const activeTemplate = activeTemplateProp || 'professional'
+  const templateConfig = (templateConfigs || TEMPLATE_DEFAULTS)[activeTemplate] || TEMPLATE_DEFAULTS[activeTemplate]
 
   const handleDownload = useCallback(async (type) => {
     if (!cvData) return
     setDlStatus(s => ({ ...s, [type]: 'loading' }))
     try {
       const cvWithTemplate = { ...cvData, selected_template: activeTemplate }
-      const stem = (cvData.contact?.full_name || 'cv').replace(/\s+/g, '_').toLowerCase()
+      const stem = (cvData.full_name || 'cv').replace(/\s+/g, '_').toLowerCase()
 
       if (type === 'pdf') {
         // Prefer pre-generated base64 if available
@@ -25,7 +27,7 @@ export default function PreviewPanel({ cvData, previewHtml, downloads, stage }) 
           const blob = new Blob([bytes], { type: 'application/pdf' })
           triggerDownload(blob, `${stem}_cv.pdf`)
         } else {
-          const blob = await downloadPDF(cvWithTemplate)
+          const blob = await downloadPDF(cvWithTemplate, templateConfig)
           triggerDownload(blob, `${stem}_cv.pdf`)
         }
       } else if (type === 'docx') {
@@ -52,7 +54,7 @@ export default function PreviewPanel({ cvData, previewHtml, downloads, stage }) 
       setDlStatus(s => ({ ...s, [type]: 'error' }))
       setTimeout(() => setDlStatus(s => ({ ...s, [type]: 'idle' })), 2500)
     }
-  }, [cvData, activeTemplate, downloads])
+  }, [cvData, activeTemplate, templateConfig, downloads, onTemplateChange, onConfigChange])
 
   if (stage === 'generating') {
     return <GeneratingState />
@@ -60,94 +62,16 @@ export default function PreviewPanel({ cvData, previewHtml, downloads, stage }) 
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      {/* Download bar — shown once CV data exists */}
-      {cvData && (
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          padding: '8px 16px',
-          borderBottom: '1px solid var(--border)',
-          background: 'var(--surface)',
-          flexShrink: 0,
-        }}>
-          <span style={{
-            fontSize: 11,
-            color: 'var(--text3)',
-            fontFamily: "'JetBrains Mono', monospace",
-            marginRight: 4,
-          }}>
-            Export:
-          </span>
-
-          {[
-            { type: 'pdf',  label: 'PDF',   icon: '📄', enabled: true },
-            { type: 'docx', label: 'Word',  icon: '📝', enabled: true },
-            { type: 'json', label: 'JSON',  icon: '{}',  enabled: true },
-          ].map(({ type, label, icon, enabled }) => {
-            const status = dlStatus[type]
-            const isDone    = status === 'done'
-            const isLoading = status === 'loading'
-            const isError   = status === 'error'
-            return (
-              <button
-                key={type}
-                onClick={() => enabled && handleDownload(type)}
-                disabled={!enabled || isLoading}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 5,
-                  padding: '5px 13px', borderRadius: 8, cursor: enabled ? 'pointer' : 'default',
-                  border: `1px solid ${isDone ? 'rgba(0,200,150,0.4)' : isError ? 'rgba(244,63,94,0.4)' : 'var(--border2)'}`,
-                  background: isDone  ? 'rgba(0,200,150,0.1)'
-                             : isError ? 'rgba(244,63,94,0.1)'
-                             : 'var(--surface2)',
-                  color: isDone  ? 'var(--teal)'
-                        : isError ? '#fb7185'
-                        : isLoading ? 'var(--text3)'
-                        : 'var(--text2)',
-                  fontSize: 12, fontWeight: 600,
-                  transition: 'all 0.2s',
-                  opacity: isLoading ? 0.7 : 1,
-                }}
-              >
-                {isLoading ? (
-                  <span style={{
-                    display: 'inline-block', width: 12, height: 12,
-                    border: '2px solid currentColor', borderTopColor: 'transparent',
-                    borderRadius: '50%', animation: 'spin 0.7s linear infinite',
-                  }} />
-                ) : (
-                  <span style={{ fontSize: 13 }}>{icon}</span>
-                )}
-                {isDone ? '✓ Downloaded' : isError ? 'Failed' : label}
-              </button>
-            )
-          })}
-
-          <div style={{ flex: 1 }} />
-
-          {/* CV name chip */}
-          {cvData?.contact?.full_name && (
-            <span style={{
-              fontSize: 11, color: 'var(--text2)',
-              fontFamily: "'JetBrains Mono', monospace",
-              background: 'var(--surface2)',
-              border: '1px solid var(--border)',
-              borderRadius: 6, padding: '3px 10px',
-            }}>
-              {cvData.contact.full_name}
-            </span>
-          )}
-        </div>
-      )}
-
-      {/* CV Preview */}
+      {/* CV Preview (contains its own header with export + template selector) */}
       <div style={{ flex: 1, overflow: 'hidden' }}>
         <CVPreview
           cvData={cvData}
           previewHtml={previewHtml}
-          activeTemplate={activeTemplate}
-          onTemplateChange={setActiveTemplate}
+          templateConfig={templateConfig}
+          initialTemplate={activeTemplate}
+          customTemplates={customTemplates}
+          onTemplateChange={onTemplateChange}
+          onConfigChange={onConfigChange}
         />
       </div>
     </div>

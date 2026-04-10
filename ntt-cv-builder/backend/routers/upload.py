@@ -52,12 +52,15 @@ async def upload_cv(
     try:
         text = parse_uploaded_file(file_bytes, file.filename)
 
-        # Update the session orchestrator directly
+        # Schedule CV processing as a background task so the WebSocket
+        # handler can drain the push queue and forward events to the client.
+        import asyncio
         from routers.chat import sessions
         if session_id in sessions:
             orchestrator = sessions[session_id]
-            async for _ in orchestrator.process_uploaded_cv(text):
-                pass  # Events are pushed via WebSocket separately
+            asyncio.create_task(orchestrator.process_uploaded_cv(text))
+        else:
+            log.warning("Upload arrived for unknown session", session_id=session_id)
 
         return JSONResponse({
             "status": "ok",

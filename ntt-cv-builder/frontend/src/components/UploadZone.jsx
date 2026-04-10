@@ -61,7 +61,7 @@ export default function UploadZone({ sessionId, onUploadComplete, onError }) {
       onDrop={handleDrop}
       onClick={() => !uploading && inputRef.current?.click()}
       style={{
-        margin: '8px 12px',
+        margin: 0,
         padding: '14px 16px',
         borderRadius: 10,
         border: `1.5px dashed ${dragging ? 'var(--teal)' : 'var(--border2)'}`,

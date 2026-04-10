@@ -14,7 +14,7 @@ A fully conversational, AI-powered CV builder built with Python, FastAPI, the Op
 | LLM | GPT-4o (function calling + vision) |
 | RAG Pipeline | LangChain + ChromaDB + `text-embedding-3-large` |
 | Schema Validation | Pydantic v2 |
-| PDF Rendering | WeasyPrint + Jinja2 |
+| PDF Rendering | Playwright (Chromium) + Jinja2 |
 | DOCX Generation | python-docx + docxtpl |
 | Document Parsing | PyMuPDF (fitz) + python-docx |
 | Frontend | React 18 + Vite |
@@ -40,7 +40,8 @@ cd backend
 python -m venv .venv
 source .venv/bin/activate      # Windows: .venv\Scripts\activate
 pip install -r ../requirements.txt
-uvicorn main:app --reload --port 8000
+playwright install chromium          # install headless browser for PDF export
+uvicorn main:app --reload --port 8000 --log-level info
 ```
 
 RAG knowledge base seeds automatically on first start (~10 seconds).

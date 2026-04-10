@@ -1,5 +1,5 @@
 """
-main.py — NTT Data AI CV Builder
+main.py — NTT Data Smart CV Builder
 FastAPI application entry point.
 
 Start with:
@@ -22,6 +22,10 @@ from routers import chat, upload, export
 settings = get_settings()
 
 # ── Logging ──────────────────────────────────────────────────
+logging.basicConfig(
+    level=logging.getLevelName(settings.log_level),
+    format="%(asctime)s [%(levelname)-8s] %(name)s: %(message)s",
+)
 structlog.configure(
     wrapper_class=structlog.make_filtering_bound_logger(
         logging.getLevelName(settings.log_level)
@@ -33,7 +37,7 @@ log = structlog.get_logger()
 # ── Lifespan: seed RAG on startup ────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    log.info("Starting NTT Data AI CV Builder...")
+    log.info("Starting NTT Data Smart CV Builder...")
     try:
         from rag.ingestion import seed_knowledge_base
         seed_knowledge_base()
@@ -46,7 +50,7 @@ async def lifespan(app: FastAPI):
 
 # ── App ───────────────────────────────────────────────────────
 app = FastAPI(
-    title="NTT Data AI CV Builder",
+    title="NTT Data Smart CV Builder",
     description="AI-powered CV builder using OpenAI Agents SDK + RAG",
     version="1.0.0",
     lifespan=lifespan,

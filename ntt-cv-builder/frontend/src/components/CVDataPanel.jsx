@@ -63,9 +63,9 @@ function Pill({ text, color = 'var(--teal)' }) {
 export default function CVDataPanel({ cvData }) {
   if (!cvData) return null
 
-  const { contact, professional_summary, work_experience, education, skills, certifications, languages, target_role } = cvData
+  const { full_name, email, phone, location, linkedin_url, professional_summary, work_experience, education, skills, certifications, languages, target_role } = cvData
 
-  const hasAnyData = contact?.full_name || professional_summary || work_experience?.length || education?.length || skills?.length
+  const hasAnyData = full_name || professional_summary || work_experience?.length || education?.length || skills?.length
 
   if (!hasAnyData) {
     return (
@@ -81,13 +81,13 @@ export default function CVDataPanel({ cvData }) {
     <div style={{ fontSize: 12, overflowY: 'auto', flex: 1 }}>
 
       {/* Contact */}
-      {contact?.full_name && (
+      {full_name && (
         <Section title="Contact" icon="👤">
-          <Field label="Name" value={contact.full_name} />
-          <Field label="Email" value={contact.email} />
-          <Field label="Phone" value={contact.phone} />
-          <Field label="Location" value={contact.location} />
-          <Field label="LinkedIn" value={contact.linkedin_url} />
+          <Field label="Name" value={full_name} />
+          <Field label="Email" value={email} />
+          <Field label="Phone" value={phone} />
+          <Field label="Location" value={location} />
+          <Field label="LinkedIn" value={linkedin_url} />
           {target_role && <Field label="Target Role" value={target_role} />}
         </Section>
       )}
@@ -113,15 +113,15 @@ export default function CVDataPanel({ cvData }) {
               <div style={{ fontWeight: 600, fontSize: 12, color: 'var(--text)' }}>{role.job_title}</div>
               <div style={{ fontSize: 11, color: 'var(--teal)', marginBottom: 3 }}>{role.company}</div>
               <div style={{ fontSize: 10.5, color: 'var(--text3)', fontFamily: "'JetBrains Mono',monospace" }}>
-                {role.start_date}{role.start_date ? ' – ' : ''}{role.is_current ? 'Present' : role.end_date}
+                {role.date_range?.start}{role.date_range?.start ? ' – ' : ''}{role.date_range?.is_current || role.date_range?.end?.toLowerCase() === 'present' ? 'Present' : (role.date_range?.end || '')}
               </div>
-              {role.bullet_points?.length > 0 && (
+              {role.bullets?.length > 0 && (
                 <ul style={{ marginTop: 5, paddingLeft: 14 }}>
-                  {role.bullet_points.slice(0, 2).map((bp, j) => (
+                  {role.bullets.slice(0, 2).map((bp, j) => (
                     <li key={j} style={{ fontSize: 10.5, color: 'var(--text2)', marginBottom: 2 }}>{bp}</li>
                   ))}
-                  {role.bullet_points.length > 2 && (
-                    <li style={{ fontSize: 10.5, color: 'var(--text3)' }}>+{role.bullet_points.length - 2} more...</li>
+                  {role.bullets.length > 2 && (
+                    <li style={{ fontSize: 10.5, color: 'var(--text3)' }}>+{role.bullets.length - 2} more...</li>
                   )}
                 </ul>
               )}
@@ -141,8 +141,8 @@ export default function CVDataPanel({ cvData }) {
             }}>
               <div style={{ fontWeight: 600, fontSize: 12, color: 'var(--text)' }}>{edu.degree}</div>
               <div style={{ fontSize: 11, color: 'var(--text2)' }}>{edu.institution}</div>
-              {edu.end_date && (
-                <div style={{ fontSize: 10.5, color: 'var(--text3)', fontFamily: "'JetBrains Mono',monospace" }}>{edu.end_date}</div>
+              {edu.date_range?.end && (
+                <div style={{ fontSize: 10.5, color: 'var(--text3)', fontFamily: "'JetBrains Mono',monospace" }}>{edu.date_range.end}</div>
               )}
               {edu.grade && <div style={{ fontSize: 10.5, color: 'var(--teal)' }}>{edu.grade}</div>}
             </div>
@@ -155,11 +155,7 @@ export default function CVDataPanel({ cvData }) {
         <Section title={`Skills (${skills.length})`} icon="⚡" defaultOpen={false}>
           <div style={{ display: 'flex', flexWrap: 'wrap' }}>
             {skills.map((s, i) => (
-              <Pill key={i} text={s.name} color={
-                s.category === 'Programming' ? '#6366f1' :
-                s.category === 'Cloud' ? '#0ea5e9' :
-                'var(--teal)'
-              } />
+              <Pill key={i} text={typeof s === 'string' ? s : s.name} color="var(--teal)" />
             ))}
           </div>
         </Section>
@@ -171,7 +167,7 @@ export default function CVDataPanel({ cvData }) {
           {certifications.map((c, i) => (
             <div key={i} style={{ marginBottom: 5 }}>
               <div style={{ fontSize: 12, color: 'var(--text)' }}>{c.name}</div>
-              <div style={{ fontSize: 11, color: 'var(--text3)' }}>{c.issuer} {c.date_obtained ? `· ${c.date_obtained}` : ''}</div>
+              <div style={{ fontSize: 11, color: 'var(--text3)' }}>{c.issuer} {(c.date || c.date_obtained) ? `· ${c.date || c.date_obtained}` : ''}</div>
             </div>
           ))}
         </Section>
@@ -182,7 +178,7 @@ export default function CVDataPanel({ cvData }) {
         <Section title="Languages" icon="🌍" defaultOpen={false}>
           <div style={{ display: 'flex', flexWrap: 'wrap' }}>
             {languages.map((l, i) => (
-              <Pill key={i} text={`${l.language} · ${l.proficiency}`} color="#8b5cf6" />
+              <Pill key={i} text={typeof l === 'string' ? l : `${l.language}${l.proficiency ? ' · ' + l.proficiency : ''}`} color="#8b5cf6" />
             ))}
           </div>
         </Section>

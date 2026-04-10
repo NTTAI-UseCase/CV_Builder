@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     # App
     cors_origins: List[str] = ["http://localhost:3000", "http://localhost:8000"]
     log_level: str = "INFO"
-    app_name: str = "NTT Data AI CV Builder"
+    app_name: str = "NTT Data Smart CV Builder"
 
     @property
     def max_upload_bytes(self) -> int:
