@@ -10,6 +10,9 @@ import { createSession } from './lib/api'
 import ChatPanel from './components/ChatPanel'
 import PreviewPanel from './components/PreviewPanel'
 import Header from './components/Header'
+import TemplateSettingsModal from './components/TemplateSettingsModal'
+import { TEMPLATE_DEFAULTS } from './lib/templateDefaults'
+import { ErrorBoundary } from './main.jsx'
 
 export default function App() {
   const [sessionId, setSessionId] = useState(null)
@@ -21,7 +24,11 @@ export default function App() {
   const [isThinking, setIsThinking] = useState(false)
   const [validationData, setValidationData] = useState(null)
   const [progress, setProgress] = useState(null)
-  const [theme, setTheme] = useState('dark')
+  const [theme, setTheme] = useState(() => sessionStorage.getItem('cv_theme') || 'light')
+  const [customiseOpen, setCustomiseOpen] = useState(false)
+  const [templateConfigs, setTemplateConfigs] = useState({ ...TEMPLATE_DEFAULTS })
+  const [activeTemplate, setActiveTemplate] = useState('professional')
+  const [customTemplates, setCustomTemplates] = useState([])
   const voice = useVoice()
 
   // Apply theme to <html> so CSS [data-theme] selector works
@@ -30,14 +37,27 @@ export default function App() {
   }, [theme])
 
   const toggleTheme = useCallback(() => {
-    setTheme(t => t === 'dark' ? 'light' : 'dark')
+    setTheme(t => {
+      const next = t === 'dark' ? 'light' : 'dark'
+      sessionStorage.setItem('cv_theme', next)
+      return next
+    })
   }, [])
 
-  // Init session on mount
+  // Init session on mount — persist in sessionStorage so StrictMode double-mount
+  // and hot-reloads reuse the same session instead of creating a new one.
   useEffect(() => {
-    createSession()
-      .then(id => setSessionId(id))
-      .catch(err => console.error('Session init failed', err))
+    const existing = sessionStorage.getItem('cv_session_id')
+    if (existing) {
+      setSessionId(existing)
+    } else {
+      createSession()
+        .then(id => {
+          sessionStorage.setItem('cv_session_id', id)
+          setSessionId(id)
+        })
+        .catch(err => console.error('Session init failed', err))
+    }
   }, [])
 
   // Route WebSocket server events → state
@@ -71,6 +91,7 @@ export default function App() {
         break
 
       case 'progress':
+        setIsThinking(false)
         setProgress(data)
         break
 
@@ -88,6 +109,10 @@ export default function App() {
         }])
         break
 
+      case 'ping':
+        // Server keepalive ping — absorb silently (no state change needed)
+        break
+
       default:
         break
     }
@@ -103,20 +128,59 @@ export default function App() {
     send('message', text)
   }, [connected, send])
 
-  const handleUploadComplete = useCallback((cvDataFromUpload) => {
-    setCvData(cvDataFromUpload)
-    setMessages(prev => [...prev, {
-      role: 'assistant',
-      content: '✅ I\'ve read your CV! Let me take a look at what we have and we\'ll fill in any gaps together.',
-      id: Date.now(),
-    }])
+  const handleUploadComplete = useCallback(() => {
+    // The backend will send cv_update + message events over the WebSocket.
+    // Just show the thinking indicator so the user knows processing is in progress.
+    setIsThinking(true)
   }, [])
 
-  const showPreviewPanel = previewHtml || downloads || (cvData && stage !== 'greeting')
+  const handleClearChat = useCallback(() => {
+    setMessages([])
+    setProgress(null)
+    setIsThinking(false)
+  }, [])
+
+  const handleNewChat = useCallback(() => {
+    sessionStorage.removeItem('cv_session_id')
+    window.location.reload()
+  }, [])
+
+  const showPreviewPanel = previewHtml || downloads || cvData?.full_name || (cvData && stage !== 'greeting')
+
+  const handleTemplateConfigChange = useCallback((templateKey, newConfig) => {
+    setTemplateConfigs(prev => ({ ...prev, [templateKey]: newConfig }))
+  }, [])
+
+  const handleAddTemplate = useCallback(({ key, label, desc, baseKey }) => {
+    setCustomTemplates(prev => [...prev, { key, label, desc, baseKey }])
+    setTemplateConfigs(prev => ({ ...prev, [key]: { ...TEMPLATE_DEFAULTS[baseKey] } }))
+  }, [])
+
+  const handleDeleteTemplate = useCallback((key) => {
+    setCustomTemplates(prev => prev.filter(t => t.key !== key))
+    setTemplateConfigs(prev => {
+      const next = { ...prev }
+      delete next[key]
+      return next
+    })
+    setActiveTemplate(prev => (prev === key ? 'professional' : prev))
+  }, [])
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
-      <Header connected={connected} stage={stage} cvData={cvData} theme={theme} onToggleTheme={toggleTheme} />
+      <Header connected={connected} theme={theme} onToggleTheme={toggleTheme}
+        onCustomise={() => setCustomiseOpen(v => !v)} customiseActive={customiseOpen}
+        cvData={cvData} />
+
+      <TemplateSettingsModal
+        open={customiseOpen}
+        onClose={() => setCustomiseOpen(false)}
+        configs={templateConfigs}
+        onConfigChange={handleTemplateConfigChange}
+        customTemplates={customTemplates}
+        onAddTemplate={handleAddTemplate}
+        onDeleteTemplate={handleDeleteTemplate}
+      />
 
       <div style={{
         flex: 1,
@@ -134,19 +198,36 @@ export default function App() {
           sessionId={sessionId}
           onSend={sendMessage}
           onUploadComplete={handleUploadComplete}
-          cvData={cvData}
+          onClearChat={handleClearChat}
+          onNewChat={handleNewChat}
           validationData={validationData}
           stage={stage}
           voice={voice}
         />
 
         {showPreviewPanel && (
+          <ErrorBoundary fallback={(err) => (
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12, color: 'var(--text3)', background: 'var(--bg)', borderLeft: '1px solid var(--border)' }}>
+              <div style={{ fontSize: 32 }}>⚠️</div>
+              <div style={{ fontSize: 13, color: 'var(--text2)' }}>Preview panel crashed</div>
+              <pre style={{ fontSize: 11, color: '#f87171', maxWidth: 400, whiteSpace: 'pre-wrap', textAlign: 'center' }}>{err.message}</pre>
+            </div>
+          )}>
           <PreviewPanel
             cvData={cvData}
             previewHtml={previewHtml}
             downloads={downloads}
             stage={stage}
+            templateConfigs={templateConfigs}
+            activeTemplate={activeTemplate}
+            customTemplates={customTemplates}
+            onTemplateChange={(key, cfg) => {
+              setActiveTemplate(key)
+              if (cfg) handleTemplateConfigChange(key, cfg)
+            }}
+            onConfigChange={(cfg) => handleTemplateConfigChange(activeTemplate, cfg)}
           />
+          </ErrorBoundary>
         )}
       </div>
     </div>

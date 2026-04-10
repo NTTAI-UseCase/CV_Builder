@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8"/>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+  :root { --accent: {{ config.accent_color or '#008B6E' }}; }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
-    font-family: 'Inter', -apple-system, sans-serif;
+    font-family: 'Calibri', 'Segoe UI', Arial, sans-serif;
     font-size: 10pt;
     color: #1a2035;
     line-height: 1.5;
@@ -18,28 +18,22 @@
     margin: 0 auto;
   }
 
-  /* Header */
-  .header { border-bottom: 2px solid #008B6E; padding-bottom: 16px; margin-bottom: 20px; }
-  .name { font-size: 26pt; font-weight: 700; color: #1a2035; letter-spacing: -0.5px; margin-bottom: 6px; }
-  .contact-row {
-    display: flex; flex-wrap: wrap; gap: 4px 16px;
-    font-size: 9pt; color: #5a6478;
-  }
+  .header { border-bottom: 2px solid var(--accent); padding-bottom: 16px; margin-bottom: 20px; }
+  .name { font-size: 26pt; font-weight: 700; color: #1a2035; letter-spacing: -0.5px; margin-bottom: 4px; }
+  .headline { font-size: 11pt; color: var(--accent); font-weight: 500; margin-bottom: 8px; }
+  .contact-row { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 9pt; color: #5a6478; }
   .contact-item { display: flex; align-items: center; gap: 4px; }
 
-  /* Section */
   .section { margin-bottom: 18px; }
   .section-title {
     font-size: 8.5pt; font-weight: 700; letter-spacing: 1.8px;
-    text-transform: uppercase; color: #008B6E;
+    text-transform: uppercase; color: var(--accent);
     border-bottom: 1px solid #e2e8f0;
     padding-bottom: 4px; margin-bottom: 12px;
   }
 
-  /* Summary */
   .summary { font-size: 10pt; color: #374151; line-height: 1.6; }
 
-  /* Experience */
   .role { margin-bottom: 14px; }
   .role-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 2px; }
   .role-title { font-size: 11pt; font-weight: 600; color: #1a2035; }
@@ -47,24 +41,26 @@
   .role-company { font-size: 9.5pt; color: #5a6478; margin-bottom: 6px; }
   .role-bullets { padding-left: 14px; }
   .role-bullets li { margin-bottom: 3px; font-size: 9.5pt; color: #374151; }
-  .role-desc { font-size: 9.5pt; color: #374151; }
 
-  /* Education */
   .edu-item { margin-bottom: 10px; }
   .edu-header { display: flex; justify-content: space-between; align-items: baseline; }
   .edu-degree { font-size: 10.5pt; font-weight: 600; }
   .edu-inst { font-size: 9.5pt; color: #5a6478; }
 
-  /* Skills */
-  .skills-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px 24px; }
-  .skill-cat-name { font-size: 9pt; font-weight: 600; color: #1a2035; margin-bottom: 2px; }
-  .skill-list { font-size: 9pt; color: #374151; }
+  .skills-wrap { display: flex; flex-wrap: wrap; gap: 5px; }
+  .skill-tag {
+    background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534;
+    border-radius: 4px; padding: 2px 8px; font-size: 8.5pt;
+  }
 
-  /* Certs / Languages */
-  .cert-item, .lang-item { font-size: 9.5pt; margin-bottom: 4px; color: #374151; }
+  .cert-item { font-size: 9.5pt; margin-bottom: 4px; color: #374151; }
   .cert-name { font-weight: 600; }
 
-  /* Tags */
+  .lang-item { font-size: 9.5pt; margin-right: 16px; color: #374151; display: inline-block; }
+
+  .achievement-list { padding-left: 14px; }
+  .achievement-list li { margin-bottom: 4px; font-size: 9.5pt; color: #374151; }
+
   .tech-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
   .tag {
     background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534;
@@ -77,6 +73,7 @@
 <!-- HEADER -->
 <div class="header">
   <div class="name">{{ cv.contact.full_name or 'Your Name' }}</div>
+  {% if cv.headline %}<div class="headline">{{ cv.headline }}</div>{% endif %}
   <div class="contact-row">
     {% if cv.contact.email %}<span class="contact-item">✉ {{ cv.contact.email }}</span>{% endif %}
     {% if cv.contact.phone %}<span class="contact-item">📞 {{ cv.contact.phone }}</span>{% endif %}
@@ -87,7 +84,7 @@
 </div>
 
 <!-- PROFESSIONAL SUMMARY -->
-{% if cv.professional_summary %}
+{% if show.summary and cv.professional_summary %}
 <div class="section">
   <div class="section-title">Professional Summary</div>
   <p class="summary">{{ cv.professional_summary }}</p>
@@ -95,7 +92,7 @@
 {% endif %}
 
 <!-- WORK EXPERIENCE -->
-{% if cv.work_experience %}
+{% if show.experience and cv.work_experience %}
 <div class="section">
   <div class="section-title">Work Experience</div>
   {% for role in cv.work_experience %}
@@ -108,16 +105,11 @@
     </div>
     <div class="role-company">
       {{ role.company }}{% if role.location %} · {{ role.location }}{% endif %}
-      {% if role.employment_type %} · {{ role.employment_type.value.replace('_', ' ').title() }}{% endif %}
     </div>
     {% if role.bullet_points %}
     <ul class="role-bullets">
-      {% for bullet in role.bullet_points %}
-      <li>{{ bullet }}</li>
-      {% endfor %}
+      {% for bullet in role.bullet_points %}<li>{{ bullet }}</li>{% endfor %}
     </ul>
-    {% elif role.description %}
-    <p class="role-desc">{{ role.description }}</p>
     {% endif %}
     {% if role.technologies %}
     <div class="tech-tags">
@@ -129,8 +121,18 @@
 </div>
 {% endif %}
 
+<!-- KEY ACHIEVEMENTS -->
+{% if show.achievements and cv.achievements %}
+<div class="section">
+  <div class="section-title">Key Achievements</div>
+  <ul class="achievement-list">
+    {% for a in cv.achievements %}<li>{{ a }}</li>{% endfor %}
+  </ul>
+</div>
+{% endif %}
+
 <!-- EDUCATION -->
-{% if cv.education %}
+{% if show.education and cv.education %}
 <div class="section">
   <div class="section-title">Education</div>
   {% for edu in cv.education %}
@@ -149,28 +151,19 @@
 {% endif %}
 
 <!-- SKILLS -->
-{% if cv.skills %}
+{% if show.skills and cv.skills %}
 <div class="section">
   <div class="section-title">Skills</div>
-  {% set categories = {} %}
-  {% for skill in cv.skills %}
-    {% set cat = skill.category or 'Core Skills' %}
-    {% if cat not in categories %}{% set _ = categories.update({cat: []}) %}{% endif %}
-    {% set _ = categories[cat].append(skill.name) %}
-  {% endfor %}
-  <div class="skills-grid">
-    {% for cat, names in categories.items() %}
-    <div>
-      <div class="skill-cat-name">{{ cat }}</div>
-      <div class="skill-list">{{ names | join(', ') }}</div>
-    </div>
+  <div class="skills-wrap">
+    {% for skill in cv.skills %}
+    <span class="skill-tag">{{ skill.name }}</span>
     {% endfor %}
   </div>
 </div>
 {% endif %}
 
 <!-- CERTIFICATIONS -->
-{% if cv.certifications %}
+{% if show.certifications and cv.certifications %}
 <div class="section">
   <div class="section-title">Certifications</div>
   {% for cert in cv.certifications %}
@@ -183,12 +176,22 @@
 </div>
 {% endif %}
 
+<!-- AWARDS -->
+{% if show.awards and cv.awards %}
+<div class="section">
+  <div class="section-title">Awards & Recognition</div>
+  <ul class="achievement-list">
+    {% for a in cv.awards %}<li>{{ a }}</li>{% endfor %}
+  </ul>
+</div>
+{% endif %}
+
 <!-- LANGUAGES -->
-{% if cv.languages %}
+{% if show.languages and cv.languages %}
 <div class="section">
   <div class="section-title">Languages</div>
   {% for lang in cv.languages %}
-  <span class="lang-item">{{ lang.language }} ({{ lang.proficiency }})</span>{% if not loop.last %} &nbsp;·&nbsp; {% endif %}
+  <span class="lang-item">{{ lang.language }}{% if lang.proficiency %} ({{ lang.proficiency }}){% endif %}</span>
   {% endfor %}
 </div>
 {% endif %}

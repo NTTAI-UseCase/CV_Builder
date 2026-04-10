@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 80" fill="none">
+  <!-- NTT DATA logo mark: outer ring + inner teardrop circle -->
+  <g transform="translate(8, 8)">
+    <!-- Outer circle ring -->
+    <circle cx="32" cy="32" r="30" stroke="#0066CC" stroke-width="5.5" fill="none"/>
+    <!-- Inner small filled circle (top) -->
+    <circle cx="32" cy="18" r="8" fill="#0066CC"/>
+    <!-- Inner large partial circle / arc (bottom) forming the eye shape -->
+    <circle cx="32" cy="38" r="16" stroke="#0066CC" stroke-width="5.5" fill="none"/>
+  </g>
+  <!-- NTT DATA wordmark -->
+  <text x="82" y="52" font-family="'Arial Black', 'Arial', sans-serif" font-weight="900" font-size="28" fill="#0066CC" letter-spacing="1">NTT DATA</text>
+</svg>

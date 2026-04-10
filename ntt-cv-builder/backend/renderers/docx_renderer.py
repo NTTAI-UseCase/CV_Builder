@@ -9,7 +9,7 @@ from docx import Document
 from docx.shared import Pt, RGBColor, Inches, Cm
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.enum.style import WD_STYLE_TYPE
-from schemas.cv_schema import CVData
+from renderers.pdf_renderer import _adapt
 
 # NTT Data brand colours
 BRAND_DARK = RGBColor(0x1a, 0x20, 0x35)       # Dark navy
@@ -35,11 +35,12 @@ def _add_section_divider(doc: Document) -> None:
     run.font.size = Pt(7)
 
 
-def render_docx(cv: CVData) -> bytes:
+def render_docx(cv) -> bytes:
     """
     Render a CVData object as a Word DOCX binary.
     Returns the raw bytes of the .docx file.
     """
+    cv = _adapt(cv)
     doc = Document()
 
     # ── Page margins ──

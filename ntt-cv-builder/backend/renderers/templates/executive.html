@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Palatino Linotype', 'Book Antiqua', Palatino, serif;
+    font-size: 9.5pt;
+    color: #2c3e50;
+    background: #fff;
+    display: grid;
+    grid-template-columns: 1fr 215px;
+    min-height: 100vh;
+  }
+
+  /* ── MAIN ── */
+  .main { padding: 44px 40px; }
+
+  .name {
+    font-family: 'Palatino Linotype', 'Book Antiqua', Palatino, serif;
+    font-size: 30pt; font-weight: 700;
+    color: #1a2035; letter-spacing: -0.5px;
+    line-height: 1.1; margin-bottom: 4px;
+  }
+  .headline {
+    font-size: 11pt; color: #c9a84c; font-weight: 600;
+    letter-spacing: 0.3px; margin-bottom: 22px;
+  }
+
+  .section-title {
+    font-family: 'Palatino Linotype', 'Book Antiqua', Palatino, serif;
+    font-size: 10pt; font-weight: 700; letter-spacing: 1.5px;
+    text-transform: uppercase; color: #1a2035;
+    border-bottom: 1.5px solid #c9a84c;
+    padding-bottom: 3px; margin-bottom: 12px; margin-top: 20px;
+  }
+  .section-title:first-of-type { margin-top: 0; }
+
+  .summary { color: #374151; line-height: 1.65; }
+
+  /* Achievements callout */
+  .achievements-callout {
+    border-left: 3px solid #c9a84c;
+    padding: 12px 16px;
+    background: #fffdf5;
+    margin-bottom: 20px;
+    margin-top: 16px;
+  }
+  .callout-title {
+    font-size: 7.5pt; letter-spacing: 2px; text-transform: uppercase;
+    color: #c9a84c; font-weight: 700; margin-bottom: 8px;
+  }
+  .callout-list { padding-left: 14px; }
+  .callout-list li { margin-bottom: 5px; color: #2c3e50; font-size: 9.5pt; }
+
+  /* Experience */
+  .role { margin-bottom: 16px; }
+  .role-header { display: flex; justify-content: space-between; align-items: baseline; }
+  .role-title { font-size: 10.5pt; font-weight: 600; color: #1a2035; }
+  .role-dates { font-size: 8pt; color: #7f8c8d; white-space: nowrap; }
+  .role-company { font-size: 9pt; color: #7f8c8d; margin-bottom: 5px; }
+  .role-bullets { padding-left: 14px; }
+  .role-bullets li { margin-bottom: 3px; color: #374151; }
+
+  /* Education */
+  .edu-item { margin-bottom: 10px; }
+  .edu-degree { font-weight: 600; font-size: 10pt; }
+  .edu-inst { font-size: 9pt; color: #7f8c8d; }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    background: {% if config.sidebar_dark %}#1a1f2e{% else %}#faf8f4{% endif %};
+    padding: 44px 20px;
+    color: {% if config.sidebar_dark %}#d4c5a0{% else %}#2c3e50{% endif %};
+  }
+  .sidebar-title {
+    font-size: 7.5pt; letter-spacing: 2px; text-transform: uppercase; font-weight: 700;
+    color: {% if config.sidebar_dark %}#c9a84c{% else %}#8a6914{% endif %};
+    margin-bottom: 10px; margin-top: 22px;
+  }
+  .sidebar-title:first-child { margin-top: 0; }
+  .sidebar-item {
+    font-size: 8.5pt;
+    color: {% if config.sidebar_dark %}#cbd5e1{% else %}#4a4a4a{% endif %};
+    margin-bottom: 6px; word-break: break-word; line-height: 1.45;
+  }
+  .skill-tag {
+    display: inline-block; margin: 2px 3px 2px 0;
+    background: {% if config.sidebar_dark %}#2d3548{% else %}#eee8da{% endif %};
+    border: 1px solid {% if config.sidebar_dark %}#3d4560{% else %}#d4c5a0{% endif %};
+    color: {% if config.sidebar_dark %}#c9a84c{% else %}#5a4a1e{% endif %};
+    border-radius: 3px; padding: 1px 7px; font-size: 8pt;
+  }
+</style>
+</head>
+<body>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="name">{{ cv.contact.full_name or 'Your Name' }}</div>
+  {% if cv.headline or cv.target_role %}
+  <div class="headline">{{ cv.headline or cv.target_role }}</div>
+  {% endif %}
+
+  {% if show.summary and cv.professional_summary %}
+  <p class="summary">{{ cv.professional_summary }}</p>
+  {% endif %}
+
+  {% if show.achievements and cv.achievements %}
+  <div class="achievements-callout">
+    <div class="callout-title">Key Achievements</div>
+    <ul class="callout-list">
+      {% for a in cv.achievements %}<li>{{ a }}</li>{% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  {% if show.experience and cv.work_experience %}
+  <div class="section-title">Professional Experience</div>
+  {% for role in cv.work_experience %}
+  <div class="role">
+    <div class="role-header">
+      <span class="role-title">{{ role.job_title }}</span>
+      {% if role.start_date %}
+      <span class="role-dates">{{ role.start_date }} – {{ 'Present' if role.is_current else (role.end_date or '') }}</span>
+      {% endif %}
+    </div>
+    <div class="role-company">{{ role.company }}{% if role.location %} · {{ role.location }}{% endif %}</div>
+    {% if role.bullet_points %}
+    <ul class="role-bullets">{% for b in role.bullet_points %}<li>{{ b }}</li>{% endfor %}</ul>
+    {% endif %}
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  {% if show.awards and cv.awards %}
+  <div class="section-title">Awards & Recognition</div>
+  <ul class="callout-list">
+    {% for a in cv.awards %}<li>{{ a }}</li>{% endfor %}
+  </ul>
+  {% endif %}
+
+  {% if show.education and cv.education %}
+  <div class="section-title">Education</div>
+  {% for edu in cv.education %}
+  <div class="edu-item">
+    <div class="edu-degree">{{ edu.degree }}</div>
+    <div class="edu-inst">{{ edu.institution }}{% if edu.grade %} · {{ edu.grade }}{% endif %}{% if edu.end_date %} · {{ edu.end_date }}{% endif %}</div>
+  </div>
+  {% endfor %}
+  {% endif %}
+</div>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="sidebar-title">Contact</div>
+  {% if cv.contact.email %}<div class="sidebar-item">✉ {{ cv.contact.email }}</div>{% endif %}
+  {% if cv.contact.phone %}<div class="sidebar-item">{{ cv.contact.phone }}</div>{% endif %}
+  {% if cv.contact.location %}<div class="sidebar-item">{{ cv.contact.location }}</div>{% endif %}
+  {% if cv.contact.linkedin_url %}<div class="sidebar-item">{{ cv.contact.linkedin_url }}</div>{% endif %}
+
+  {% if show.skills and cv.skills %}
+  <div class="sidebar-title">Core Competencies</div>
+  {% for skill in cv.skills %}
+  <span class="skill-tag">{{ skill.name }}</span>
+  {% endfor %}
+  {% endif %}
+
+  {% if show.certifications and cv.certifications %}
+  <div class="sidebar-title">Certifications</div>
+  {% for cert in cv.certifications %}
+  <div class="sidebar-item">
+    <strong>{{ cert.name }}</strong>{% if cert.issuer %}<br>{{ cert.issuer }}{% endif %}
+    {% if cert.date_obtained %}<br><em>{{ cert.date_obtained }}</em>{% endif %}
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  {% if show.languages and cv.languages %}
+  <div class="sidebar-title">Languages</div>
+  {% for lang in cv.languages %}
+  <div class="sidebar-item">{{ lang.language }}{% if lang.proficiency %} — {{ lang.proficiency }}{% endif %}</div>
+  {% endfor %}
+  {% endif %}
+</div>
+
+</body>
+</html>

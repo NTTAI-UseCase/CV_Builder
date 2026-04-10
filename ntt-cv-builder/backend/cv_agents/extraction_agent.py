@@ -122,6 +122,7 @@ async def extract_cv_from_text(
     Run structured extraction via function calling.
     Returns a populated CVData object.
     """
+    logger.info("Starting CV extraction, text length=%d chars", len(text))
     try:
         response = await client.chat.completions.create(
             model=model,
@@ -134,15 +135,16 @@ async def extract_cv_from_text(
             tools=[{"type": "function", "function": EXTRACT_CV_FUNCTION}],
             tool_choice={"type": "function", "function": {"name": "extract_cv_data"}},
             temperature=0,
+            timeout=90,  # 90-second hard limit
         )
 
         tool_call = response.choices[0].message.tool_calls[0]
         extracted = json.loads(tool_call.function.arguments)
-        logger.info(f"Extraction complete. Fields found: {list(extracted.keys())}")
+        logger.info("Extraction complete. Fields found: %s", list(extracted.keys()))
         return _dict_to_cv_data(extracted)
 
     except Exception as e:
-        logger.error(f"Extraction agent error: {e}")
+        logger.error("Extraction agent error: %s", e)
         raise
 
 

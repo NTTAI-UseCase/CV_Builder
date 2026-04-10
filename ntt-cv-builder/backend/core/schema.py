@@ -76,6 +76,7 @@ class CVData(BaseModel):
     certifications: List[Certification] = Field(default_factory=list)
     languages: List[str] = Field(default_factory=list)
     achievements: List[str] = Field(default_factory=list)
+    awards: List[str] = Field(default_factory=list)
 
     # Meta
     target_role: Optional[str] = None
@@ -100,6 +101,30 @@ class CVData(BaseModel):
         if not self.work_experience: missing.append("at least one work experience entry")
         if not self.skills: missing.append("skills list")
         return missing
+
+
+# ── Template Config Schema ──────────────────────────────────
+
+class TemplateConfig(BaseModel):
+    """Per-template customisation options sent from the frontend UI."""
+    # Section visibility (all default True → safe for existing callers)
+    show_summary: bool = True
+    show_experience: bool = True
+    show_education: bool = True
+    show_skills: bool = True
+    show_certifications: bool = True
+    show_languages: bool = True
+    show_achievements: bool = True
+    show_awards: bool = True
+    # Shared style
+    accent_color: Optional[str] = None        # e.g. "#008B6E"
+    # Modern
+    show_skill_bars: bool = True
+    # Minimal
+    font_size_pt: int = 10
+    compact_spacing: bool = False
+    # Executive
+    sidebar_dark: bool = True
 
 
 # ── Session Schema ──────────────────────────────────────────

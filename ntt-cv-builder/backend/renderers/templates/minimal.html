@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Georgia', 'Times New Roman', serif;
+    font-size: {{ config.font_size_pt or 10 }}pt;
+    color: #111;
+    background: #fff;
+    padding: 48px 52px;
+    max-width: 720px;
+    margin: 0 auto;
+    line-height: {{ '1.35' if config.compact_spacing else '1.55' }};
+  }
+
+  /* Header */
+  .name {
+    font-size: 22pt; font-weight: 700; color: #111;
+    letter-spacing: -0.3px; margin-bottom: 6px;
+    font-family: 'Georgia', serif;
+  }
+  .contact-line {
+    font-size: 8.5pt; color: #555;
+    font-family: 'Courier New', monospace;
+    margin-bottom: 20px;
+    letter-spacing: 0.3px;
+  }
+  .contact-line span + span::before { content: ' | '; color: #bbb; }
+
+  /* Section */
+  .section { margin-bottom: {{ '14px' if config.compact_spacing else '20px' }}; }
+  .section-title {
+    font-size: 7.5pt; font-weight: 700; letter-spacing: 2.2px;
+    text-transform: uppercase; color: #333;
+    border-bottom: 0.5px solid #ccc;
+    padding-bottom: 3px;
+    margin-bottom: {{ '8px' if config.compact_spacing else '12px' }};
+  }
+
+  /* Summary */
+  .summary { font-size: inherit; color: #333; }
+
+  /* Experience */
+  .role { margin-bottom: {{ '10px' if config.compact_spacing else '14px' }}; }
+  .role-header { display: flex; justify-content: space-between; align-items: baseline; }
+  .role-title { font-weight: 700; font-size: inherit; color: #111; }
+  .role-dates { font-size: 8pt; color: #777; font-style: italic; white-space: nowrap; }
+  .role-company { font-style: italic; color: #555; font-size: 9pt; margin-bottom: 4px; }
+  .role-bullets { padding-left: 16px; margin-top: 3px; }
+  .role-bullets li { margin-bottom: 2px; color: #333; }
+
+  /* Education */
+  .edu-item { margin-bottom: {{ '8px' if config.compact_spacing else '10px' }}; }
+  .edu-degree { font-weight: 700; }
+  .edu-inst { font-style: italic; color: #555; font-size: 9pt; }
+
+  /* Skills — flat comma list */
+  .skills-list { color: #333; }
+
+  /* Achievements */
+  .achievement-list { padding-left: 16px; }
+  .achievement-list li { margin-bottom: 3px; color: #333; }
+
+  /* Certifications */
+  .cert-item { margin-bottom: 3px; color: #333; }
+  .cert-name { font-weight: 700; }
+
+  /* Languages — inline */
+  .lang-inline { color: #555; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="name">{{ cv.contact.full_name or 'Your Name' }}</div>
+<div class="contact-line">
+  {% if cv.contact.email %}<span>{{ cv.contact.email }}</span>{% endif %}
+  {% if cv.contact.phone %}<span>{{ cv.contact.phone }}</span>{% endif %}
+  {% if cv.contact.location %}<span>{{ cv.contact.location }}</span>{% endif %}
+  {% if cv.contact.linkedin_url %}<span>{{ cv.contact.linkedin_url }}</span>{% endif %}
+</div>
+
+<!-- SUMMARY -->
+{% if show.summary and cv.professional_summary %}
+<div class="section">
+  <div class="section-title">Profile</div>
+  <p class="summary">{{ cv.professional_summary }}</p>
+</div>
+{% endif %}
+
+<!-- EXPERIENCE -->
+{% if show.experience and cv.work_experience %}
+<div class="section">
+  <div class="section-title">Experience</div>
+  {% for role in cv.work_experience %}
+  <div class="role">
+    <div class="role-header">
+      <span class="role-title">{{ role.job_title }}</span>
+      {% if role.start_date %}
+      <span class="role-dates">{{ role.start_date }} – {{ 'Present' if role.is_current else (role.end_date or '') }}</span>
+      {% endif %}
+    </div>
+    <div class="role-company">{{ role.company }}{% if role.location %}, {{ role.location }}{% endif %}</div>
+    {% if role.bullet_points %}
+    <ul class="role-bullets">
+      {% for b in role.bullet_points %}<li>{{ b }}</li>{% endfor %}
+    </ul>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- EDUCATION -->
+{% if show.education and cv.education %}
+<div class="section">
+  <div class="section-title">Education</div>
+  {% for edu in cv.education %}
+  <div class="edu-item">
+    <div class="edu-degree">{{ edu.degree }}{% if edu.grade %} — {{ edu.grade }}{% endif %}</div>
+    <div class="edu-inst">{{ edu.institution }}{% if edu.end_date %}, {{ edu.end_date }}{% endif %}</div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- SKILLS -->
+{% if show.skills and cv.skills %}
+<div class="section">
+  <div class="section-title">Skills</div>
+  <p class="skills-list">{{ cv.skills | map(attribute='name') | join(', ') }}</p>
+</div>
+{% endif %}
+
+<!-- ACHIEVEMENTS -->
+{% if show.achievements and cv.achievements %}
+<div class="section">
+  <div class="section-title">Achievements</div>
+  <ul class="achievement-list">
+    {% for a in cv.achievements %}<li>{{ a }}</li>{% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+<!-- AWARDS -->
+{% if show.awards and cv.awards %}
+<div class="section">
+  <div class="section-title">Awards & Recognition</div>
+  <ul class="achievement-list">
+    {% for a in cv.awards %}<li>{{ a }}</li>{% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+<!-- CERTIFICATIONS -->
+{% if show.certifications and cv.certifications %}
+<div class="section">
+  <div class="section-title">Certifications</div>
+  {% for cert in cv.certifications %}
+  <div class="cert-item">
+    <span class="cert-name">{{ cert.name }}</span>{% if cert.issuer %} — {{ cert.issuer }}{% endif %}{% if cert.date_obtained %} ({{ cert.date_obtained }}){% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- LANGUAGES -->
+{% if show.languages and cv.languages %}
+<div class="section">
+  <div class="section-title">Languages</div>
+  <p class="lang-inline">
+    {% for lang in cv.languages %}{{ lang.language }}{% if lang.proficiency %} ({{ lang.proficiency }}){% endif %}{% if not loop.last %}, {% endif %}{% endfor %}
+  </p>
+</div>
+{% endif %}
+
+</body>
+</html>

@@ -30,16 +30,15 @@ export async function uploadCV(file, sessionId) {
   return res.json()
 }
 
-/** Download a PDF from cv data */
-export async function downloadPDF(cvData) {
+/** Download a PDF from cv data with optional template config */
+export async function downloadPDF(cvData, templateConfig = {}) {
   const res = await fetch(`${API_BASE}/export/pdf`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(cvData),
+    body: JSON.stringify({ cv: cvData, config: templateConfig }),
   })
   if (!res.ok) throw new Error('PDF generation failed')
-  const blob = await res.blob()
-  return blob
+  return res.blob()
 }
 
 /** Download a DOCX from cv data */
@@ -54,12 +53,12 @@ export async function downloadDOCX(cvData) {
   return blob
 }
 
-/** Get HTML preview of the CV */
-export async function getPreview(cvData) {
+/** Get HTML preview of the CV with optional template config */
+export async function getPreview(cvData, templateConfig = {}) {
   const res = await fetch(`${API_BASE}/export/preview`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(cvData),
+    body: JSON.stringify({ cv: cvData, config: templateConfig }),
   })
   if (!res.ok) throw new Error('Preview failed')
   const data = await res.json()
