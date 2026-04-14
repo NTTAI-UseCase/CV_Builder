@@ -40,6 +40,8 @@ cd backend
 python -m venv .venv
 source .venv/bin/activate      # Windows: .venv\Scripts\activate
 pip install -r ../requirements.txt
+# set following attribute if there's certificate error 'UNABLE_TO_GET_ISSUER_CERT_LOCALLY' while installing playwright
+$env:NODE_TLS_REJECT_UNAUTHORIZED = "0"
 playwright install chromium          # install headless browser for PDF export
 uvicorn main:app --reload --port 8000 --log-level info
 ```

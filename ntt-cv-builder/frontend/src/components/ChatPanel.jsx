@@ -148,6 +148,8 @@ export default function ChatPanel({
   onNewChat,
   isThinking,
   voice,
+  editSectionPrompt,
+  onEditSectionConsumed,
 }) {
   const [input, setInput] = useState('')
   const bottomRef = useRef(null)
@@ -167,6 +169,15 @@ export default function ChatPanel({
       textareaRef.current?.focus()
     }
   }, [voice?.isListening, voice?.transcript])
+
+  // Pre-fill input when an edit-section chip is clicked in the preview panel
+  useEffect(() => {
+    if (editSectionPrompt) {
+      setInput(editSectionPrompt)
+      onEditSectionConsumed?.()
+      textareaRef.current?.focus()
+    }
+  }, [editSectionPrompt])
 
   const handleSend = useCallback(() => {
     const text = input.trim()
@@ -409,7 +420,17 @@ export default function ChatPanel({
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           fontFamily: "'JetBrains Mono', monospace",
         }}>
-          <span>Shift+Enter for new line</span>
+          {voice?.isListening ? (
+            <span style={{ color: '#f43f5e', display: 'flex', alignItems: 'center', gap: 5 }}>
+              <span style={{
+                display: 'inline-block', width: 6, height: 6, borderRadius: '50%',
+                background: '#f43f5e', animation: 'pulse 1s ease infinite',
+              }} />
+              Press the mic button to stop recording
+            </span>
+          ) : (
+            <span>Shift+Enter for new line</span>
+          )}
 
           {/* Auto-speak toggle */}
           {voice?.outputSupported && (

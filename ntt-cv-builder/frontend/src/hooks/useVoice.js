@@ -23,7 +23,7 @@ export function useVoice() {
   const startListening = useCallback(() => {
     if (!SR) return
     const rec = new SR()
-    rec.continuous     = false
+    rec.continuous     = true
     rec.interimResults = true
     rec.lang           = 'en-US'
 

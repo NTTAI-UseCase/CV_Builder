@@ -66,12 +66,19 @@
     background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534;
     border-radius: 3px; padding: 1px 6px; font-size: 8pt; font-family: monospace;
   }
+
+  .ntt-watermark {
+    position: fixed; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    opacity: 0.07; pointer-events: none; z-index: 0;
+  }
+  .ntt-watermark img { width: 220px; height: auto; display: block; }
 </style>
 </head>
 <body>
 
 <!-- HEADER -->
-<div class="header">
+<div class="header" data-section="contact">
   <div class="name">{{ cv.contact.full_name or 'Your Name' }}</div>
   {% if cv.headline %}<div class="headline">{{ cv.headline }}</div>{% endif %}
   <div class="contact-row">
@@ -85,7 +92,7 @@
 
 <!-- PROFESSIONAL SUMMARY -->
 {% if show.summary and cv.professional_summary %}
-<div class="section">
+<div class="section" data-section="summary">
   <div class="section-title">Professional Summary</div>
   <p class="summary">{{ cv.professional_summary }}</p>
 </div>
@@ -93,12 +100,12 @@
 
 <!-- WORK EXPERIENCE -->
 {% if show.experience and cv.work_experience %}
-<div class="section">
+<div class="section" data-section="experience">
   <div class="section-title">Work Experience</div>
   {% for role in cv.work_experience %}
   <div class="role">
     <div class="role-header">
-      <span class="role-title">{{ role.job_title }}</span>
+      <span class="role-title">{{ role.job_title or '' }}</span>
       {% if role.start_date %}
       <span class="role-dates">{{ role.start_date }} – {{ 'Present' if role.is_current else (role.end_date or '') }}</span>
       {% endif %}
@@ -123,7 +130,7 @@
 
 <!-- KEY ACHIEVEMENTS -->
 {% if show.achievements and cv.achievements %}
-<div class="section">
+<div class="section" data-section="achievements">
   <div class="section-title">Key Achievements</div>
   <ul class="achievement-list">
     {% for a in cv.achievements %}<li>{{ a }}</li>{% endfor %}
@@ -133,7 +140,7 @@
 
 <!-- EDUCATION -->
 {% if show.education and cv.education %}
-<div class="section">
+<div class="section" data-section="education">
   <div class="section-title">Education</div>
   {% for edu in cv.education %}
   <div class="edu-item">
@@ -152,7 +159,7 @@
 
 <!-- SKILLS -->
 {% if show.skills and cv.skills %}
-<div class="section">
+<div class="section" data-section="skills">
   <div class="section-title">Skills</div>
   <div class="skills-wrap">
     {% for skill in cv.skills %}
@@ -164,7 +171,7 @@
 
 <!-- CERTIFICATIONS -->
 {% if show.certifications and cv.certifications %}
-<div class="section">
+<div class="section" data-section="certifications">
   <div class="section-title">Certifications</div>
   {% for cert in cv.certifications %}
   <div class="cert-item">
@@ -178,7 +185,7 @@
 
 <!-- AWARDS -->
 {% if show.awards and cv.awards %}
-<div class="section">
+<div class="section" data-section="awards">
   <div class="section-title">Awards & Recognition</div>
   <ul class="achievement-list">
     {% for a in cv.awards %}<li>{{ a }}</li>{% endfor %}
@@ -188,7 +195,7 @@
 
 <!-- LANGUAGES -->
 {% if show.languages and cv.languages %}
-<div class="section">
+<div class="section" data-section="languages">
   <div class="section-title">Languages</div>
   {% for lang in cv.languages %}
   <span class="lang-item">{{ lang.language }}{% if lang.proficiency %} ({{ lang.proficiency }}){% endif %}</span>
@@ -196,5 +203,6 @@
 </div>
 {% endif %}
 
+{% if ntt_logo %}<div class="ntt-watermark"><img src="{{ ntt_logo }}" alt="NTT Data" /></div>{% endif %}
 </body>
 </html>

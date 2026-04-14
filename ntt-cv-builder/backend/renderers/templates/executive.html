@@ -93,98 +93,126 @@
     color: {% if config.sidebar_dark %}#c9a84c{% else %}#5a4a1e{% endif %};
     border-radius: 3px; padding: 1px 7px; font-size: 8pt;
   }
+
+  .ntt-watermark {
+    position: fixed; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    opacity: 0.07; pointer-events: none; z-index: 0;
+  }
+  .ntt-watermark img { width: 220px; height: auto; display: block; }
 </style>
 </head>
 <body>
 
 <!-- MAIN -->
 <div class="main">
-  <div class="name">{{ cv.contact.full_name or 'Your Name' }}</div>
-  {% if cv.headline or cv.target_role %}
-  <div class="headline">{{ cv.headline or cv.target_role }}</div>
-  {% endif %}
+  <div data-section="contact">
+    <div class="name">{{ cv.contact.full_name or 'Your Name' }}</div>
+    {% if cv.headline or cv.target_role %}
+    <div class="headline">{{ cv.headline or cv.target_role }}</div>
+    {% endif %}
+  </div>
 
   {% if show.summary and cv.professional_summary %}
+  <div data-section="summary">
   <p class="summary">{{ cv.professional_summary }}</p>
+  </div>
   {% endif %}
 
   {% if show.achievements and cv.achievements %}
-  <div class="achievements-callout">
-    <div class="callout-title">Key Achievements</div>
-    <ul class="callout-list">
-      {% for a in cv.achievements %}<li>{{ a }}</li>{% endfor %}
-    </ul>
+  <div data-section="achievements">
+    <div class="achievements-callout">
+      <div class="callout-title">Key Achievements</div>
+      <ul class="callout-list">
+        {% for a in cv.achievements %}<li>{{ a }}</li>{% endfor %}
+      </ul>
+    </div>
   </div>
   {% endif %}
 
   {% if show.experience and cv.work_experience %}
-  <div class="section-title">Professional Experience</div>
-  {% for role in cv.work_experience %}
-  <div class="role">
-    <div class="role-header">
-      <span class="role-title">{{ role.job_title }}</span>
-      {% if role.start_date %}
-      <span class="role-dates">{{ role.start_date }} – {{ 'Present' if role.is_current else (role.end_date or '') }}</span>
+  <div data-section="experience">
+    <div class="section-title">Professional Experience</div>
+    {% for role in cv.work_experience %}
+    <div class="role">
+      <div class="role-header">
+        <span class="role-title">{{ role.job_title or '' }}</span>
+        {% if role.start_date %}
+        <span class="role-dates">{{ role.start_date }} – {{ 'Present' if role.is_current else (role.end_date or '') }}</span>
+        {% endif %}
+      </div>
+      <div class="role-company">{{ role.company }}{% if role.location %} · {{ role.location }}{% endif %}</div>
+      {% if role.bullet_points %}
+      <ul class="role-bullets">{% for b in role.bullet_points %}<li>{{ b }}</li>{% endfor %}</ul>
       {% endif %}
     </div>
-    <div class="role-company">{{ role.company }}{% if role.location %} · {{ role.location }}{% endif %}</div>
-    {% if role.bullet_points %}
-    <ul class="role-bullets">{% for b in role.bullet_points %}<li>{{ b }}</li>{% endfor %}</ul>
-    {% endif %}
+    {% endfor %}
   </div>
-  {% endfor %}
   {% endif %}
 
   {% if show.awards and cv.awards %}
-  <div class="section-title">Awards & Recognition</div>
-  <ul class="callout-list">
-    {% for a in cv.awards %}<li>{{ a }}</li>{% endfor %}
-  </ul>
+  <div data-section="awards">
+    <div class="section-title">Awards & Recognition</div>
+    <ul class="callout-list">
+      {% for a in cv.awards %}<li>{{ a }}</li>{% endfor %}
+    </ul>
+  </div>
   {% endif %}
 
   {% if show.education and cv.education %}
-  <div class="section-title">Education</div>
-  {% for edu in cv.education %}
-  <div class="edu-item">
-    <div class="edu-degree">{{ edu.degree }}</div>
-    <div class="edu-inst">{{ edu.institution }}{% if edu.grade %} · {{ edu.grade }}{% endif %}{% if edu.end_date %} · {{ edu.end_date }}{% endif %}</div>
+  <div data-section="education">
+    <div class="section-title">Education</div>
+    {% for edu in cv.education %}
+    <div class="edu-item">
+      <div class="edu-degree">{{ edu.degree }}</div>
+      <div class="edu-inst">{{ edu.institution }}{% if edu.grade %} · {{ edu.grade }}{% endif %}{% if edu.end_date %} · {{ edu.end_date }}{% endif %}</div>
+    </div>
+    {% endfor %}
   </div>
-  {% endfor %}
   {% endif %}
 </div>
 
 <!-- SIDEBAR -->
 <div class="sidebar">
-  <div class="sidebar-title">Contact</div>
-  {% if cv.contact.email %}<div class="sidebar-item">✉ {{ cv.contact.email }}</div>{% endif %}
-  {% if cv.contact.phone %}<div class="sidebar-item">{{ cv.contact.phone }}</div>{% endif %}
-  {% if cv.contact.location %}<div class="sidebar-item">{{ cv.contact.location }}</div>{% endif %}
-  {% if cv.contact.linkedin_url %}<div class="sidebar-item">{{ cv.contact.linkedin_url }}</div>{% endif %}
+  <div data-section="contact">
+    <div class="sidebar-title">Contact</div>
+    {% if cv.contact.email %}<div class="sidebar-item">✉ {{ cv.contact.email }}</div>{% endif %}
+    {% if cv.contact.phone %}<div class="sidebar-item">{{ cv.contact.phone }}</div>{% endif %}
+    {% if cv.contact.location %}<div class="sidebar-item">{{ cv.contact.location }}</div>{% endif %}
+    {% if cv.contact.linkedin_url %}<div class="sidebar-item">{{ cv.contact.linkedin_url }}</div>{% endif %}
+  </div>
 
   {% if show.skills and cv.skills %}
-  <div class="sidebar-title">Core Competencies</div>
-  {% for skill in cv.skills %}
-  <span class="skill-tag">{{ skill.name }}</span>
-  {% endfor %}
+  <div data-section="skills">
+    <div class="sidebar-title">Core Competencies</div>
+    {% for skill in cv.skills %}
+    <span class="skill-tag">{{ skill.name }}</span>
+    {% endfor %}
+  </div>
   {% endif %}
 
   {% if show.certifications and cv.certifications %}
-  <div class="sidebar-title">Certifications</div>
-  {% for cert in cv.certifications %}
-  <div class="sidebar-item">
-    <strong>{{ cert.name }}</strong>{% if cert.issuer %}<br>{{ cert.issuer }}{% endif %}
-    {% if cert.date_obtained %}<br><em>{{ cert.date_obtained }}</em>{% endif %}
+  <div data-section="certifications">
+    <div class="sidebar-title">Certifications</div>
+    {% for cert in cv.certifications %}
+    <div class="sidebar-item">
+      <strong>{{ cert.name }}</strong>{% if cert.issuer %}<br>{{ cert.issuer }}{% endif %}
+      {% if cert.date_obtained %}<br><em>{{ cert.date_obtained }}</em>{% endif %}
+    </div>
+    {% endfor %}
   </div>
-  {% endfor %}
   {% endif %}
 
   {% if show.languages and cv.languages %}
-  <div class="sidebar-title">Languages</div>
-  {% for lang in cv.languages %}
-  <div class="sidebar-item">{{ lang.language }}{% if lang.proficiency %} — {{ lang.proficiency }}{% endif %}</div>
-  {% endfor %}
+  <div data-section="languages">
+    <div class="sidebar-title">Languages</div>
+    {% for lang in cv.languages %}
+    <div class="sidebar-item">{{ lang.language }}{% if lang.proficiency %} — {{ lang.proficiency }}{% endif %}</div>
+    {% endfor %}
+  </div>
   {% endif %}
 </div>
 
+{% if ntt_logo %}<div class="ntt-watermark"><img src="{{ ntt_logo }}" alt="NTT Data" /></div>{% endif %}
 </body>
 </html>

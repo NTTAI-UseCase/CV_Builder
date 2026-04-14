@@ -6,6 +6,48 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { downloadPDF, downloadDOCX, triggerDownload, getPreview } from '../lib/api.js'
 import { TEMPLATES, TEMPLATE_DEFAULTS } from '../lib/templateDefaults.js'
+import SectionEditModal from './SectionEditModal.jsx'
+
+// ── Per-template visual identity used in the selector cards ─────────────────
+// Cards render on a forced white doc-background so fonts/colours always show.
+const TEMPLATE_VISUAL_META = {
+  professional: {
+    accent: '#008B6E',
+    font: "'Calibri','Segoe UI',Arial,sans-serif",
+    nameSize: 8, nameWeight: 700, nameColor: '#1a2035',
+    sublineColor: '#008B6E',
+    headerBorder: '2px solid #008B6E',
+    layout: 'single',
+    sidebarBg: null,
+  },
+  modern: {
+    accent: '#00e5a0',
+    font: "'Trebuchet MS','Verdana',sans-serif",
+    nameSize: 7.5, nameWeight: 700, nameColor: '#ffffff',
+    sublineColor: '#00e5a0',
+    headerBorder: 'none',
+    layout: 'sidebar',
+    sidebarBg: '#0f172a',      // dark navy sidebar like the real template
+  },
+  minimal: {
+    accent: '#444',
+    font: "Georgia,'Times New Roman',serif",
+    nameSize: 9, nameWeight: 700, nameColor: '#111',
+    sublineColor: '#888',
+    headerBorder: '0.5px solid #ccc',
+    layout: 'single',
+    sidebarBg: null,
+  },
+  executive: {
+    accent: '#c9a84c',
+    font: "'Palatino Linotype','Book Antiqua',Palatino,serif",
+    nameSize: 8.5, nameWeight: 700, nameColor: '#1a2035',
+    sublineColor: '#c9a84c',
+    headerBorder: '1.5px solid #c9a84c',
+    layout: 'sidebar',
+    sidebarBg: '#1a1f2e',      // dark sidebar like executive template
+  },
+}
 
 // ── Customise panel ──────────────────────────────────────────────────────────
 const SECTION_TOGGLES = [
@@ -155,23 +197,23 @@ function WaitingState({ cvData, completion }) {
       </div>
       <div style={{ width: '100%', maxWidth: 280, display: 'flex', flexDirection: 'column', gap: 8 }}>
         {[
-          { label: 'Contact info',          done: !!(cvData?.full_name && cvData?.email) },
-          { label: 'Professional summary',  done: !!cvData?.professional_summary },
-          { label: 'Work experience',       done: (cvData?.work_experience?.length || 0) > 0 },
-          { label: 'Education',             done: (cvData?.education?.length || 0) > 0 },
-          { label: 'Skills',                done: (cvData?.skills?.length || 0) >= 3 },
-        ].map(({ label, done }) => (
-          <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 12 }}>
+          { label: 'Contact info',          done: !!(cvData?.full_name && cvData?.email), optional: false },
+          { label: 'Professional summary',  done: !!cvData?.professional_summary,          optional: false },
+          { label: 'Work experience',       done: (cvData?.work_experience?.length || 0) > 0, optional: false },
+          { label: 'Education',             done: (cvData?.education?.length || 0) > 0,    optional: false },
+          { label: 'Skills',                done: (cvData?.skills?.length || 0) >= 3,      optional: false },
+        ].map(({ label, done, optional }) => (
+          <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 12, opacity: optional ? 0.65 : 1 }}>
             <div style={{
               width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
               background: done ? 'rgba(0,200,150,0.15)' : 'var(--surface2)',
-              border: `1.5px solid ${done ? 'var(--teal)' : 'var(--border2)'}`,
+              border: `1.5px solid ${done ? 'var(--teal)' : optional ? 'var(--border)' : 'var(--border2)'}`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 9, color: done ? 'var(--teal)' : 'var(--text3)',
             }}>
               {done ? '✓' : ''}
             </div>
-            <span style={{ color: done ? 'var(--text)' : 'var(--text3)' }}>{label}</span>
+            <span style={{ color: done ? 'var(--text)' : 'var(--text3)', fontStyle: optional ? 'italic' : 'normal' }}>{label}</span>
           </div>
         ))}
       </div>
@@ -200,11 +242,25 @@ function LoadingOverlay() {
 }
 
 // ── Main component ───────────────────────────────────────────────────────────
-export default function CVPreview({ cvData, previewHtml, templateConfig, initialTemplate, customTemplates = [], onTemplateChange, onConfigChange }) {
+// ── Section metadata for missing-banner and edit chips ──────────────────────
+const CV_SECTIONS = [
+  { key: 'contact',      label: 'Contact',      required: true,  prompt: 'I want to update my contact information (name, email, phone, location)', addPrompt: 'I need to add my phone number and location', done: (cv) => !!(cv?.full_name && cv?.email) },
+  { key: 'summary',      label: 'Summary',      required: true,  prompt: 'I want to rewrite my professional summary', addPrompt: 'I need to add my professional summary', done: (cv) => !!cv?.professional_summary },
+  { key: 'experience',   label: 'Experience',   required: true,  prompt: 'I want to update my work experience', addPrompt: 'I need to add my work experience', done: (cv) => (cv?.work_experience?.length || 0) > 0 },
+  { key: 'education',    label: 'Education',    required: true,  prompt: 'I want to update my education details', addPrompt: 'I need to add my education', done: (cv) => (cv?.education?.length || 0) > 0 },
+  { key: 'skills',       label: 'Skills',       required: true,  prompt: 'I want to update my skills list', addPrompt: 'I need to add my skills', done: (cv) => (cv?.skills?.length || 0) >= 3 },
+  { key: 'certifications',label:'Certifications',required: false, prompt: 'I want to update my certifications', addPrompt: 'I want to add my certifications', done: (cv) => (cv?.certifications?.length || 0) > 0 },
+  { key: 'languages',    label: 'Languages',    required: false, prompt: 'I want to update my languages', addPrompt: 'I want to add my languages', done: (cv) => (cv?.languages?.length || 0) > 0 },
+  { key: 'achievements', label: 'Achievements', required: false, prompt: 'I want to update my achievements', addPrompt: 'I want to add my achievements', done: (cv) => (cv?.achievements?.length || 0) > 0 },
+]
+
+export default function CVPreview({ cvData, previewHtml, templateConfig, initialTemplate, customTemplates = [], onTemplateChange, onConfigChange, onEditSection, onSectionEdit }) {
   const iframeRef = useRef(null)
   const allTemplates = [...TEMPLATES, ...customTemplates]
   const [activeTemplate, setActiveTemplate] = useState(initialTemplate || cvData?.selected_template || 'professional')
   const [localConfig, setLocalConfig] = useState(() => templateConfig || TEMPLATE_DEFAULTS[initialTemplate || cvData?.selected_template || 'professional'])
+  // Track previous initialTemplate so we can detect external changes (e.g. voice selection)
+  const prevInitialTemplateRef = useRef(initialTemplate)
 
   // Returns the base HTML template key (for API calls) for any template key
   const getBaseKey = useCallback((key) => {
@@ -213,6 +269,7 @@ export default function CVPreview({ cvData, previewHtml, templateConfig, initial
   }, [customTemplates])
   const [loadingPreview, setLoadingPreview] = useState(false)
   const [localHtml, setLocalHtml] = useState(previewHtml)
+  const [editingSection, setEditingSection] = useState(null)
   const [dlStatus, setDlStatus] = useState({ pdf: 'idle', docx: 'idle' })
   const debounceRef = useRef(null)
   const autoPreviewRef = useRef(null)
@@ -222,15 +279,19 @@ export default function CVPreview({ cvData, previewHtml, templateConfig, initial
   useEffect(() => { activeTemplateRef.current = activeTemplate }, [activeTemplate])
   useEffect(() => { localConfigRef.current = localConfig }, [localConfig])
 
-  const completion = cvData ? (() => {
+  // Required fields — matches backend completion_pct().
+  const { completion, missingCount } = cvData ? (() => {
     const checks = [
-      !!cvData.full_name, !!cvData.email, !!cvData.professional_summary,
+      !!cvData.full_name,
+      !!cvData.email,
+      !!cvData.professional_summary,
       (cvData.work_experience?.length || 0) > 0,
       (cvData.education?.length || 0) > 0,
       (cvData.skills?.length || 0) >= 3,
     ]
-    return Math.round(checks.filter(Boolean).length / checks.length * 100)
-  })() : 0
+    const passed = checks.filter(Boolean).length
+    return { completion: Math.round(passed / checks.length * 100), missingCount: checks.length - passed }
+  })() : { completion: 0, missingCount: 6 }
 
   // ── fetchPreview must be declared BEFORE any useEffect that references it ──
   const fetchPreview = useCallback(async (cvDataArg, template, cfg) => {
@@ -250,6 +311,18 @@ export default function CVPreview({ cvData, previewHtml, templateConfig, initial
   useEffect(() => {
     if (previewHtml) setLocalHtml(previewHtml)
   }, [previewHtml])
+
+  // Sync template when parent forces a change from outside (e.g. AI voice selection)
+  useEffect(() => {
+    if (initialTemplate && initialTemplate !== prevInitialTemplateRef.current) {
+      prevInitialTemplateRef.current = initialTemplate
+      // Only switch if it differs from our current local selection
+      setActiveTemplate(initialTemplate)
+      const newCfg = TEMPLATE_DEFAULTS[getBaseKey(initialTemplate)]
+      setLocalConfig(newCfg)
+      if (cvData) fetchPreview(cvData, initialTemplate, newCfg)
+    }
+  }, [initialTemplate, cvData, fetchPreview, getBaseKey])
 
   // Auto-render live preview as CV data fills in during conversation.
   // Uses refs for template/config so a manual template switch is never overridden.
@@ -282,6 +355,16 @@ export default function CVPreview({ cvData, previewHtml, templateConfig, initial
       console.error('iframe write failed', e)
     }
   }, [localHtml])
+
+  // Pen click in iframe → open the React edit modal
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.data?.type !== 'cv_section_edit') return
+      setEditingSection(e.data.section)
+    }
+    window.addEventListener('message', handler)
+    return () => window.removeEventListener('message', handler)
+  }, [])
 
   const handleTemplateChange = useCallback((key) => {
     const newCfg = TEMPLATE_DEFAULTS[getBaseKey(key)]
@@ -343,7 +426,7 @@ export default function CVPreview({ cvData, previewHtml, templateConfig, initial
             {cvData?.full_name || 'Your CV Preview'}
           </div>
           <div style={{ fontSize: 11, color: 'var(--text3)', fontFamily: "'JetBrains Mono',monospace" }}>
-            {completion === 100 ? '✓ Ready to generate' : `${6 - Math.round(completion / 100 * 6)} fields remaining`}
+            {completion === 100 ? '✓ Ready to generate' : `${missingCount} field${missingCount !== 1 ? 's' : ''} remaining`}
           </div>
         </div>
         {/* Download buttons */}
@@ -369,25 +452,132 @@ export default function CVPreview({ cvData, previewHtml, templateConfig, initial
         )}
       </div>
 
+      {/* ── Missing-sections banner (shown when completion < 100% and CV has started) ── */}
+      {cvData?.full_name && completion < 100 && (() => {
+        const missing = CV_SECTIONS.filter(s => s.required && !s.done(cvData))
+        if (!missing.length) return null
+        return (
+          <div style={{
+            padding: '6px 16px', background: 'rgba(245,158,11,0.08)',
+            borderBottom: '1px solid rgba(245,158,11,0.22)',
+            display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, flexWrap: 'wrap',
+          }}>
+            <span style={{ fontSize: 10.5, color: '#f59e0b', fontWeight: 700, whiteSpace: 'nowrap', fontFamily: "'JetBrains Mono',monospace" }}>
+              Still needed:
+            </span>
+            {missing.map(s => (
+              <button key={s.key} onClick={() => onEditSection?.(s.addPrompt)}
+                title={`Add ${s.label}`}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 4,
+                  padding: '2px 9px', borderRadius: 12, cursor: 'pointer',
+                  background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.4)',
+                  color: '#f59e0b', fontSize: 11, fontWeight: 600,
+                  transition: 'all 0.15s',
+                }}>
+                <span style={{ fontSize: 10 }}>+</span> {s.label}
+              </button>
+            ))}
+          </div>
+        )
+      })()}
+
       {/* Template selector row */}
       <div style={{
-        display: 'flex', gap: 6, padding: '10px 16px',
+        display: 'flex', gap: 8, padding: '10px 16px',
         borderBottom: '1px solid var(--border)',
         background: 'var(--surface)', flexShrink: 0, overflowX: 'auto', alignItems: 'center',
+        position: 'relative',
       }}>
-        {allTemplates.map(t => (
-          <button key={t.key} onClick={() => handleTemplateChange(t.key)}
-            style={{
-              padding: '5px 12px', borderRadius: 7, cursor: 'pointer',
-              border: activeTemplate === t.key ? '1px solid var(--teal)' : '1px solid var(--border)',
-              background: activeTemplate === t.key ? 'rgba(0,200,150,0.1)' : 'var(--surface2)',
-              color: activeTemplate === t.key ? 'var(--teal)' : 'var(--text2)',
-              fontSize: 11.5, fontWeight: 600, whiteSpace: 'nowrap', transition: 'all 0.2s',
-            }}>
-            {t.label}
-            <span style={{ fontSize: 10, color: 'var(--text3)', marginLeft: 5 }}>{t.desc}</span>
-          </button>
-        ))}
+        {/* Section label watermark */}
+        <div style={{
+          position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)',
+          fontSize: 22, fontWeight: 700, letterSpacing: '4px', textTransform: 'uppercase',
+          color: 'var(--text3)', opacity: 0.18, pointerEvents: 'none', userSelect: 'none',
+          fontFamily: "'JetBrains Mono', monospace",
+        }}>Templates</div>
+        {allTemplates.map(t => {
+          const isActive = activeTemplate === t.key
+          const m = TEMPLATE_VISUAL_META[t.key] || {}
+          const isSidebar = m.layout === 'sidebar'
+          return (
+            <button key={t.key} onClick={() => handleTemplateChange(t.key)}
+              title={t.label}
+              style={{
+                width: 100, flexShrink: 0,
+                padding: 0, borderRadius: 8, cursor: 'pointer',
+                border: isActive ? `2px solid ${m.accent}` : '2px solid transparent',
+                background: 'transparent',
+                overflow: 'hidden',
+                transition: 'all 0.18s',
+                outline: 'none',
+                boxShadow: isActive
+                  ? `0 0 0 3px ${m.accent}35, 0 2px 12px ${m.accent}25`
+                  : '0 1px 4px rgba(0,0,0,0.4)',
+              }}>
+
+              {/* ── Document preview (forced white background) ── */}
+              <div style={{ background: '#fff', fontFamily: m.font }}>
+
+                {/* Header */}
+                {isSidebar ? (
+                  /* Modern / Executive: left sidebar + main */
+                  <div style={{ display: 'flex', height: 42 }}>
+                    <div style={{
+                      width: 30, background: m.sidebarBg, flexShrink: 0,
+                      display: 'flex', flexDirection: 'column', justifyContent: 'center',
+                      padding: '4px 4px', gap: 2,
+                    }}>
+                      {[100, 75, 90, 60, 80].map((w, i) => (
+                        <div key={i} style={{ height: 2.5, width: `${w}%`, background: m.accent, borderRadius: 1, opacity: 0.7 }} />
+                      ))}
+                    </div>
+                    <div style={{ flex: 1, padding: '5px 5px 4px', borderBottom: m.headerBorder }}>
+                      <div style={{ fontSize: m.nameSize, fontWeight: m.nameWeight, color: m.nameColor, lineHeight: 1.2 }}>Full Name</div>
+                      <div style={{ fontSize: 5.5, color: m.sublineColor, marginTop: 1 }}>Senior Manager</div>
+                      <div style={{ height: 1, background: m.accent, marginTop: 3, opacity: 0.3 }} />
+                    </div>
+                  </div>
+                ) : (
+                  /* Professional / Minimal: single-column header */
+                  <div style={{ padding: '6px 7px 4px', borderBottom: m.headerBorder }}>
+                    <div style={{ fontSize: m.nameSize, fontWeight: m.nameWeight, color: m.nameColor, letterSpacing: '-0.2px' }}>Full Name</div>
+                    <div style={{ fontSize: 6, color: m.sublineColor, marginTop: 1, fontStyle: m.layout === 'minimal' ? 'normal' : 'normal' }}>Senior Manager · email@nttdata.com</div>
+                  </div>
+                )}
+
+                {/* Body lines */}
+                <div style={{ padding: '5px 7px 6px', display: 'flex', gap: 3 }}>
+                  {isSidebar && (
+                    <div style={{ width: 21, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 2, paddingTop: 1 }}>
+                      <div style={{ height: 2.5, background: m.accent, borderRadius: 1, opacity: 0.5, width: '100%' }} />
+                      {[85, 70, 90, 65].map((w, i) => (
+                        <div key={i} style={{ height: 2, background: `${m.accent}80`, borderRadius: 1, width: `${w}%` }} />
+                      ))}
+                    </div>
+                  )}
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <div style={{ height: 3, background: `${m.accent}60`, borderRadius: 1, width: '55%' }} />
+                    {[100, 78, 88, 65, 72, isSidebar ? null : 82].filter(Boolean).map((w, i) => (
+                      <div key={i} style={{ height: 2, width: `${w}%`, background: '#d0d0d0', borderRadius: 1 }} />
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* ── Label strip (dark UI) ── */}
+              <div style={{
+                padding: '4px 6px',
+                fontFamily: m.font, fontSize: 9, fontWeight: 700,
+                color: isActive ? m.accent : 'var(--text2)',
+                background: isActive ? `${m.accent}18` : 'var(--surface3)',
+                textAlign: 'center', letterSpacing: '0.2px',
+              }}>
+                {t.label}
+              </div>
+            </button>
+          )
+        })}
         <div style={{ flex: 1 }} />
       </div>
 
@@ -397,12 +587,25 @@ export default function CVPreview({ cvData, previewHtml, templateConfig, initial
         <iframe
           ref={iframeRef}
           title="CV Preview"
-          sandbox="allow-same-origin"
+          sandbox="allow-same-origin allow-scripts"
           style={{ width: '100%', height: '100%', border: 'none', background: '#fff', display: localHtml ? 'block' : 'none' }}
         />
         {!localHtml && (isEmpty ? <EmptyState /> : <WaitingState cvData={cvData} completion={completion} />)}
         {loadingPreview && <LoadingOverlay />}
       </div>
+
+      {/* Section edit modal — rendered over the preview */}
+      {editingSection && cvData && (
+        <SectionEditModal
+          section={editingSection}
+          cvData={cvData}
+          onSave={(patch) => {
+            onSectionEdit?.(patch)
+            setEditingSection(null)
+          }}
+          onClose={() => setEditingSection(null)}
+        />
+      )}
     </div>
   )
 }

@@ -15,11 +15,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 import os
+import truststore
 
 from config import get_settings
 from routers import chat, upload, export
 
 settings = get_settings()
+
+truststore.inject_into_ssl()
 
 # ── Logging ──────────────────────────────────────────────────
 logging.basicConfig(

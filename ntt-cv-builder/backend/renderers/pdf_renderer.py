@@ -6,12 +6,59 @@ Adapts core.schema.CVData (flat model used by agents) into the nested
 structure expected by the Jinja2 templates.
 """
 from __future__ import annotations
+import base64
 from pathlib import Path
 from types import SimpleNamespace
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from core.schema import TemplateConfig
 
 TEMPLATES_DIR = Path(__file__).parent / "templates"
+
+# ── Inline-edit overlay injected into preview HTML only (never into PDF) ──────
+# Only adds a hoverable pen button to each [data-section] element.
+# The actual edit form is a React modal rendered in the parent window.
+_EDIT_OVERLAY = """
+<style>
+  [data-section]{position:relative;}
+  .cv-edit-btn{
+    display:none;position:absolute;top:5px;right:5px;
+    width:24px;height:24px;border-radius:50%;
+    background:#fff;border:1.5px solid #008B6E;color:#008B6E;
+    cursor:pointer;font-size:13px;align-items:center;justify-content:center;
+    box-shadow:0 1px 6px rgba(0,0,0,0.2);z-index:50;
+    transition:all .15s;padding:0;line-height:1;
+  }
+  [data-section]:hover>.cv-edit-btn{display:flex;}
+  .cv-edit-btn:hover{background:#008B6E;color:#fff;transform:scale(1.12);}
+</style>
+<script>
+(function(){
+  document.querySelectorAll('[data-section]').forEach(function(el){
+    var btn=document.createElement('button');
+    btn.className='cv-edit-btn';
+    btn.innerHTML='&#9998;';
+    btn.title='Edit section';
+    el.appendChild(btn);
+    btn.addEventListener('click',function(e){
+      e.stopPropagation();
+      window.parent.postMessage({type:'cv_section_edit',section:el.dataset.section},'*');
+    });
+  });
+})();
+</script>
+"""
+
+# NTT Data logo for watermark — resolved relative to this file so it works
+# regardless of the working directory.
+_LOGO_PATH = Path(__file__).parent.parent.parent / "frontend" / "public" / "ntt-data-logo.png"
+
+def _ntt_logo_data_uri() -> str:
+    """Return a base64 data URI for the NTT logo, or empty string if missing."""
+    try:
+        data = _LOGO_PATH.read_bytes()
+        return "data:image/png;base64," + base64.b64encode(data).decode()
+    except Exception:
+        return ""
 
 
 def _get_jinja_env() -> Environment:
@@ -104,8 +151,12 @@ def _adapt(cv) -> SimpleNamespace:
     )
 
 
-def render_html_preview(cv, config: TemplateConfig | None = None) -> str:
-    """Render the CV as an HTML string for in-chat preview."""
+def render_html_preview(cv, config: TemplateConfig | None = None, _preview_mode: bool = True) -> str:
+    """Render the CV as an HTML string for in-chat preview.
+
+    When *_preview_mode* is True (default) the inline-edit overlay script is
+    injected before </body>.  render_pdf() passes False to keep the PDF clean.
+    """
     adapted = _adapt(cv)
     env = _get_jinja_env()
     template_name = f"{adapted.selected_template}.html"
@@ -123,37 +174,73 @@ def render_html_preview(cv, config: TemplateConfig | None = None) -> str:
         "achievements":   cfg.show_achievements,
         "awards":         cfg.show_awards,
     }
-    return template.render(cv=adapted, show=show, config=cfg.model_dump())
+    html = template.render(cv=adapted, show=show, config=cfg.model_dump(), ntt_logo=_ntt_logo_data_uri())
+    if _preview_mode:
+        html = html.replace("</body>", _EDIT_OVERLAY + "</body>", 1)
+    return html
+
+
+def _playwright_pdf(html_string: str) -> bytes:
+    """Run async Playwright in a dedicated thread with an explicit ProactorEventLoop.
+
+    On Windows, SelectorEventLoop (which anyio threads may inherit) cannot
+    spawn subprocesses — raising NotImplementedError when Playwright tries to
+    launch Chromium.  We avoid all global-policy mutation by explicitly
+    constructing a ProactorEventLoop for this thread and using the async
+    Playwright API directly on it.
+    """
+    import sys
+    import asyncio
+    import concurrent.futures
+
+    def _in_thread() -> bytes:
+        # Explicitly choose the right event loop type for this OS.
+        # ProactorEventLoop supports subprocess creation on Windows;
+        # new_event_loop() is fine on Linux/macOS.
+        if sys.platform == "win32":
+            loop = asyncio.ProactorEventLoop()
+        else:
+            loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+        async def _generate() -> bytes:
+            from playwright.async_api import async_playwright
+            async with async_playwright() as pw:
+                browser = await pw.chromium.launch()
+                try:
+                    page = await browser.new_page()
+                    await page.set_content(html_string, wait_until="networkidle")
+                    return await page.pdf(
+                        format="A4",
+                        print_background=True,
+                        margin={"top": "10mm", "bottom": "10mm",
+                                "left": "12mm", "right": "12mm"},
+                    )
+                finally:
+                    await browser.close()
+
+        try:
+            return loop.run_until_complete(_generate())
+        finally:
+            loop.close()
+            asyncio.set_event_loop(None)
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+        return pool.submit(_in_thread).result(timeout=90)
 
 
 def render_pdf(cv, config: TemplateConfig | None = None) -> bytes:
-    """Render the CV as a PDF binary using Playwright (headless Chromium)."""
-    import asyncio
+    """Render the CV as a PDF binary using Playwright (headless Chromium).
 
-    async def _generate() -> bytes:
-        from playwright.async_api import async_playwright
-        html_string = render_html_preview(cv, config)
-        async with async_playwright() as p:
-            browser = await p.chromium.launch()
-            page = await browser.new_page()
-            await page.set_content(html_string, wait_until="networkidle")
-            pdf_bytes = await page.pdf(
-                format="A4",
-                print_background=True,
-                margin={"top": "10mm", "bottom": "10mm", "left": "12mm", "right": "12mm"},
-            )
-            await browser.close()
-        return pdf_bytes
-
+    Generates the HTML first, then delegates to ``_playwright_pdf`` which
+    runs Playwright inside a dedicated thread so the calling event loop
+    (uvicorn/anyio) cannot interfere.
+    """
+    import traceback as _tb
+    html_string = render_html_preview(cv, config, _preview_mode=False)
     try:
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            # Inside an async context (FastAPI) — run in a thread to avoid nested loops
-            import concurrent.futures
-            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-                future = pool.submit(asyncio.run, _generate())
-                return future.result(timeout=60)
-        else:
-            return loop.run_until_complete(_generate())
+        return _playwright_pdf(html_string)
     except Exception as exc:
-        raise RuntimeError(f"PDF generation failed: {exc}") from exc
+        raise RuntimeError(
+            f"PDF generation failed [{type(exc).__name__}]: {exc}\n{_tb.format_exc()}"
+        ) from exc

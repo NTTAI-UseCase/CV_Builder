@@ -8,7 +8,7 @@ import CVPreview from './CVPreview'
 import { downloadPDF, downloadDOCX, triggerDownload } from '../lib/api'
 import { TEMPLATE_DEFAULTS } from '../lib/templateDefaults'
 
-export default function PreviewPanel({ cvData, previewHtml, downloads, stage, templateConfigs, activeTemplate: activeTemplateProp, customTemplates, onTemplateChange, onConfigChange }) {
+export default function PreviewPanel({ cvData, previewHtml, downloads, stage, templateConfigs, activeTemplate: activeTemplateProp, customTemplates, onTemplateChange, onConfigChange, onEditSection, onSectionEdit }) {
   const [dlStatus, setDlStatus] = useState({ pdf: 'idle', docx: 'idle', json: 'idle' })
   const activeTemplate = activeTemplateProp || 'professional'
   const templateConfig = (templateConfigs || TEMPLATE_DEFAULTS)[activeTemplate] || TEMPLATE_DEFAULTS[activeTemplate]
@@ -72,6 +72,8 @@ export default function PreviewPanel({ cvData, previewHtml, downloads, stage, te
           customTemplates={customTemplates}
           onTemplateChange={onTemplateChange}
           onConfigChange={onConfigChange}
+          onEditSection={onEditSection}
+          onSectionEdit={onSectionEdit}
         />
       </div>
     </div>

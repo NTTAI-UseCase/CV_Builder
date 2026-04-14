@@ -23,10 +23,33 @@ Your job is to help employees build outstanding CVs through natural conversation
 - Celebrate progress: acknowledge when a section is complete
 - Professional but conversational (not robotic)
 
+## Required vs Optional Fields
+REQUIRED — collect ALL of these before moving to template selection:
+  full_name, email, phone, location, headline, professional_summary,
+  work_experience (at least one entry), education (at least one entry), skills (at least 3)
+
+OPTIONAL — ask only once, bundled together, AFTER all required fields are done:
+  certifications, languages, achievements, awards, target_role
+
 ## Conversation Flow
 1. GREETING: Welcome the user. Ask if they have an existing CV to upload or want to start fresh.
-2. COLLECTING: Gather CV information section by section — personal details, work history, education, skills, achievements.
-3. VALIDATING: When data looks complete, confirm and ask if they want to choose a template.
+2. COLLECTING: Gather all REQUIRED fields in this order:
+   a. Full name
+   b. Email
+   c. Phone number  ← ask immediately after email
+   d. Location (city / country)  ← ask immediately after phone
+   e. Professional headline (job title / tagline)
+   f. Work experience — for each role: job title, company, dates, 2-3 key bullets
+   g. Education — degree, institution, dates
+   h. Skills (at least 3)
+   i. Professional summary (generate a draft if the user has given enough context)
+   - Do NOT ask about certifications, languages, or awards during this phase.
+   - Once ALL required fields above are filled, proceed directly to step 3.
+3. VALIDATING: When all required fields are complete (completion = 100%), ask ONE combined question:
+   "Your CV looks great! Would you like to add any optional details — such as certifications, languages, or awards — or are you ready to choose a template?"
+   - If the user says "ready", "no", "skip", or similar → move directly to TEMPLATE_PICK.
+   - If they provide optional info → collect it briefly, then move to TEMPLATE_PICK without asking further optional questions.
+   - Do NOT ask about certifications, languages, and awards separately — bundle them in one ask only.
 4. TEMPLATE_PICK: Present exactly these 4 templates and ask the user to choose one:
    - **Professional** — Classic single-column corporate layout with teal accents
    - **Modern** — Bold two-column layout with dark sidebar and teal skill highlights
@@ -38,8 +61,9 @@ Your job is to help employees build outstanding CVs through natural conversation
 ## Rules
 - Extract structured data from the user's free-text answers
 - CRITICAL: Always check "## Current Stage" in the context before responding. Never restart from GREETING if the stage is already VALIDATING, TEMPLATE_PICK, or later.
+- CRITICAL: Check "## Completion" in context. If completion is 100%, do NOT ask about optional fields one-by-one. Ask the single combined optional question (step 3) then move to template selection.
 - If current stage is VALIDATING and CV data is already populated, do NOT ask for name/job or re-introduce yourself. Jump straight to confirming details or asking about template choice.
-- If the user says "yes" or similar affirmative at VALIDATING stage, move to TEMPLATE_PICK and present the three template options.
+- If the user says "yes" or similar affirmative at VALIDATING stage, move to TEMPLATE_PICK and present the four template options.
 - For work experience, always ask for: job title, company, dates, and 2-3 key achievements
 - Keep your responses SHORT (2-4 sentences max) unless presenting a list
 - Never mention technical implementation details (agents, RAG, ChromaDB, etc.)
@@ -152,8 +176,14 @@ async def run_triage_agent(
 
 _PRESENT_ALIASES = {
     "till date", "tilldate", "till now", "tillnow", "to date",
-    "todate", "to present", "present", "current", "ongoing",
-    "now", "today", "till today",
+    "todate", "to present", "present", "current", "current date",
+    "ongoing", "now", "today", "till today",
+}
+
+# Fields where trailing punctuation (period, comma) should be stripped
+_PLAIN_TEXT_FIELDS = {
+    "full_name", "email", "phone", "location", "headline",
+    "target_role", "target_industry", "linkedin_url", "github_url",
 }
 
 
@@ -177,13 +207,81 @@ def _sanitise_date_range(dr):
     return dr
 
 
+_ENTRY_TEXT_FIELDS = {"job_title", "company", "degree", "institution", "location"}
+
+
 def _sanitise_entries(entries: list) -> list:
-    """Sanitise date_range in a list of work_experience or education dicts."""
+    """Sanitise date_range and trailing punctuation in work_experience / education dicts."""
     result = []
     for item in entries:
-        if isinstance(item, dict) and "date_range" in item:
-            item = {**item, "date_range": _sanitise_date_range(item["date_range"])}
+        if isinstance(item, dict):
+            if "date_range" in item:
+                item = {**item, "date_range": _sanitise_date_range(item["date_range"])}
+            # Strip trailing periods/commas from text sub-fields
+            item = {
+                k: v.rstrip(".,;: ") if k in _ENTRY_TEXT_FIELDS and isinstance(v, str) else v
+                for k, v in item.items()
+            }
         result.append(item)
+    return result
+
+
+def _merge_structured_entries(existing: list, new_entries: list, section: str) -> list:
+    """Smart merge for work_experience / education lists.
+
+    Instead of deduplicating by str() (which fails for partial entries built
+    across multiple conversation turns), we match entries by their primary key
+    and merge fields in — so job_title collected in turn 1 is preserved when
+    company + bullets arrive in turn 2.
+    """
+    title_key = "job_title" if section == "work_experience" else "degree"
+    result = [dict(e) if isinstance(e, dict) else e for e in existing]
+
+    for new_item in new_entries:
+        if not isinstance(new_item, dict):
+            if str(new_item) not in {str(e) for e in result}:
+                result.append(new_item)
+            continue
+
+        new_title = new_item.get(title_key)
+        matched_idx = None
+
+        if new_title:
+            # Match by primary key (job_title / degree)
+            for i, ex in enumerate(result):
+                ex_d = ex if isinstance(ex, dict) else {}
+                if ex_d.get(title_key) == new_title:
+                    matched_idx = i
+                    break
+
+        if matched_idx is None:
+            # No title in new item OR no match found — try to patch into the most
+            # recent incomplete entry (has a title but missing company/institution)
+            secondary = "company" if section == "work_experience" else "institution"
+            for i in range(len(result) - 1, -1, -1):
+                ex_d = result[i] if isinstance(result[i], dict) else {}
+                if ex_d.get(title_key) and not ex_d.get(secondary):
+                    matched_idx = i
+                    break
+
+        if matched_idx is not None:
+            ex_d = result[matched_idx] if isinstance(result[matched_idx], dict) else {}
+            merged = dict(ex_d)
+            for k, v in new_item.items():
+                if v is None:
+                    continue
+                if isinstance(v, list) and isinstance(merged.get(k), list):
+                    seen = {str(x) for x in merged[k]}
+                    for x in v:
+                        if str(x) not in seen:
+                            merged[k].append(x)
+                            seen.add(str(x))
+                elif not merged.get(k):
+                    merged[k] = v
+            result[matched_idx] = merged
+        else:
+            result.append(new_item)
+
     return result
 
 
@@ -199,13 +297,23 @@ def _merge_cv_data(existing: CVData, extracted: dict) -> CVData:
             continue
         if value is None:
             continue
+        # Strip trailing punctuation from simple text fields
+        if key in _PLAIN_TEXT_FIELDS and isinstance(value, str):
+            value = value.rstrip(".,;: ")
+        # selected_template must always be overwritten when the user picks one
+        if key == "selected_template" and isinstance(value, str) and value.strip():
+            current[key] = value.strip().lower()
+            continue
         # For lists, extend rather than replace
         if isinstance(current[key], list) and isinstance(value, list):
-            seen = {str(item) for item in current[key]}
-            for item in value:
-                if str(item) not in seen:
-                    current[key].append(item)
-                    seen.add(str(item))
+            if key in ("work_experience", "education"):
+                current[key] = _merge_structured_entries(current[key], value, key)
+            else:
+                seen = {str(item) for item in current[key]}
+                for item in value:
+                    if str(item) not in seen:
+                        current[key].append(item)
+                        seen.add(str(item))
         elif isinstance(current[key], list) and isinstance(value, dict):
             current[key].append(value)
         elif current[key] is None or current[key] == "":

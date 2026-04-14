@@ -49,6 +49,13 @@
   .summary { font-size: 10pt; color: #374151; line-height: 1.6; }
   .achievement-list { padding-left: 14px; }
   .achievement-list li { margin-bottom: 4px; font-size: 9.5pt; color: #374151; }
+
+  .ntt-watermark {
+    position: fixed; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    opacity: 0.07; pointer-events: none; z-index: 0;
+  }
+  .ntt-watermark img { width: 220px; height: auto; display: block; }
 </style>
 </head>
 <body>
@@ -58,7 +65,7 @@
   <div class="name">{{ cv.contact.full_name or 'Your Name' }}</div>
   <div class="target-role">{{ cv.target_role or cv.headline or '' }}</div>
 
-  <div class="sidebar-section">
+  <div class="sidebar-section" data-section="contact">
     <div class="sidebar-title">Contact</div>
     {% if cv.contact.email %}<div class="sidebar-item">✉ {{ cv.contact.email }}</div>{% endif %}
     {% if cv.contact.phone %}<div class="sidebar-item">📞 {{ cv.contact.phone }}</div>{% endif %}
@@ -67,7 +74,7 @@
   </div>
 
   {% if show.skills and cv.skills %}
-  <div class="sidebar-section">
+  <div class="sidebar-section" data-section="skills">
     <div class="sidebar-title">Skills</div>
     {% if config.show_skill_bars %}
       {% for skill in cv.skills[:12] %}
@@ -85,7 +92,7 @@
   {% endif %}
 
   {% if show.languages and cv.languages %}
-  <div class="sidebar-section">
+  <div class="sidebar-section" data-section="languages">
     <div class="sidebar-title">Languages</div>
     {% for lang in cv.languages %}
     <div class="sidebar-item">{{ lang.language }}{% if lang.proficiency %} — {{ lang.proficiency }}{% endif %}</div>
@@ -94,7 +101,7 @@
   {% endif %}
 
   {% if show.certifications and cv.certifications %}
-  <div class="sidebar-section">
+  <div class="sidebar-section" data-section="certifications">
     <div class="sidebar-title">Certifications</div>
     {% for cert in cv.certifications %}
     <div class="sidebar-item">{{ cert.name }}</div>
@@ -106,52 +113,63 @@
 <!-- MAIN -->
 <div class="main">
   {% if show.summary and cv.professional_summary %}
-  <div class="section-title" style="margin-top:0">About</div>
-  <p class="summary">{{ cv.professional_summary }}</p>
+  <div data-section="summary">
+    <div class="section-title" style="margin-top:0">About</div>
+    <p class="summary">{{ cv.professional_summary }}</p>
+  </div>
   {% endif %}
 
   {% if show.experience and cv.work_experience %}
-  <div class="section-title">Experience</div>
-  {% for role in cv.work_experience %}
-  <div class="role">
-    <div class="role-header">
-      <span class="role-title">{{ role.job_title }}</span>
-      {% if role.start_date %}
-      <span class="role-dates">{{ role.start_date }} – {{ 'Present' if role.is_current else (role.end_date or '') }}</span>
+  <div data-section="experience">
+    <div class="section-title">Experience</div>
+    {% for role in cv.work_experience %}
+    <div class="role">
+      <div class="role-header">
+        <span class="role-title">{{ role.job_title or '' }}</span>
+        {% if role.start_date %}
+        <span class="role-dates">{{ role.start_date }} – {{ 'Present' if role.is_current else (role.end_date or '') }}</span>
+        {% endif %}
+      </div>
+      <div class="role-company">{{ role.company }}{% if role.location %} · {{ role.location }}{% endif %}</div>
+      {% if role.bullet_points %}
+      <ul class="role-bullets">{% for b in role.bullet_points %}<li>{{ b }}</li>{% endfor %}</ul>
       {% endif %}
     </div>
-    <div class="role-company">{{ role.company }}{% if role.location %} · {{ role.location }}{% endif %}</div>
-    {% if role.bullet_points %}
-    <ul class="role-bullets">{% for b in role.bullet_points %}<li>{{ b }}</li>{% endfor %}</ul>
-    {% endif %}
+    {% endfor %}
   </div>
-  {% endfor %}
   {% endif %}
 
   {% if show.achievements and cv.achievements %}
-  <div class="section-title">Key Achievements</div>
-  <ul class="achievement-list">
-    {% for a in cv.achievements %}<li>{{ a }}</li>{% endfor %}
-  </ul>
+  <div data-section="achievements">
+    <div class="section-title">Key Achievements</div>
+    <ul class="achievement-list">
+      {% for a in cv.achievements %}<li>{{ a }}</li>{% endfor %}
+    </ul>
+  </div>
   {% endif %}
 
   {% if show.awards and cv.awards %}
-  <div class="section-title">Awards & Recognition</div>
-  <ul class="achievement-list">
-    {% for a in cv.awards %}<li>{{ a }}</li>{% endfor %}
-  </ul>
+  <div data-section="awards">
+    <div class="section-title">Awards & Recognition</div>
+    <ul class="achievement-list">
+      {% for a in cv.awards %}<li>{{ a }}</li>{% endfor %}
+    </ul>
+  </div>
   {% endif %}
 
   {% if show.education and cv.education %}
-  <div class="section-title">Education</div>
-  {% for edu in cv.education %}
-  <div class="edu-item">
-    <div class="edu-degree">{{ edu.degree }}</div>
-    <div class="edu-inst">{{ edu.institution }}{% if edu.grade %} · {{ edu.grade }}{% endif %}{% if edu.end_date %} · {{ edu.end_date }}{% endif %}</div>
+  <div data-section="education">
+    <div class="section-title">Education</div>
+    {% for edu in cv.education %}
+    <div class="edu-item">
+      <div class="edu-degree">{{ edu.degree }}</div>
+      <div class="edu-inst">{{ edu.institution }}{% if edu.grade %} · {{ edu.grade }}{% endif %}{% if edu.end_date %} · {{ edu.end_date }}{% endif %}</div>
+    </div>
+    {% endfor %}
   </div>
-  {% endfor %}
   {% endif %}
 </div>
 
+{% if ntt_logo %}<div class="ntt-watermark"><img src="{{ ntt_logo }}" alt="NTT Data" /></div>{% endif %}
 </body>
 </html>

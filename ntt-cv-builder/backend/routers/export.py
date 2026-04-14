@@ -34,8 +34,10 @@ async def export_preview(req: PreviewRequest):
 
 
 @router.post("/export/pdf")
-async def export_pdf(req: PreviewRequest):
-    """Generate and return a branded PDF of the CV."""
+def export_pdf(req: PreviewRequest):
+    """Generate and return a branded PDF of the CV.
+    Sync def so FastAPI runs it in a threadpool — required for sync Playwright.
+    """
     try:
         pdf_bytes = render_pdf(req.cv, req.config)
         filename = f"{(req.cv.full_name or 'cv').replace(' ', '_').lower()}_cv.pdf"
@@ -45,8 +47,10 @@ async def export_pdf(req: PreviewRequest):
             headers={"Content-Disposition": f'attachment; filename="{filename}"'},
         )
     except Exception as e:
-        log.error("PDF export failed", error=str(e))
-        raise HTTPException(status_code=500, detail=f"PDF generation failed: {str(e)}")
+        import traceback
+        tb = traceback.format_exc()
+        log.error("PDF export failed", error=str(e), traceback=tb)
+        raise HTTPException(status_code=500, detail=f"{type(e).__name__}: {e}\n\n{tb}")
 
 
 @router.post("/export/docx")

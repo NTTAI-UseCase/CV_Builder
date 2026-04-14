@@ -3,7 +3,7 @@
  * Root component. Manages session lifecycle, routes WebSocket events
  * to the right state slices, and renders the two-panel layout.
  */
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useWebSocket } from './hooks/useWebSocket'
 import { useVoice } from './hooks/useVoice'
 import { createSession } from './lib/api'
@@ -29,6 +29,7 @@ export default function App() {
   const [templateConfigs, setTemplateConfigs] = useState({ ...TEMPLATE_DEFAULTS })
   const [activeTemplate, setActiveTemplate] = useState('professional')
   const [customTemplates, setCustomTemplates] = useState([])
+  const [editSectionPrompt, setEditSectionPrompt] = useState(null)
   const voice = useVoice()
 
   // Apply theme to <html> so CSS [data-theme] selector works
@@ -73,6 +74,10 @@ export default function App() {
 
       case 'cv_update':
         setCvData(data)
+        // Sync template if the AI agent set one via voice/chat
+        if (data.selected_template) {
+          setActiveTemplate(data.selected_template)
+        }
         break
 
       case 'stage':
@@ -132,6 +137,12 @@ export default function App() {
     // The backend will send cv_update + message events over the WebSocket.
     // Just show the thinking indicator so the user knows processing is in progress.
     setIsThinking(true)
+  }, [])
+
+  // Handle inline section edits from the CV preview modal — patch is a partial cvData object
+  const handleSectionEdit = useCallback((patch) => {
+    if (!patch) return
+    setCvData(prev => prev ? { ...prev, ...patch } : prev)
   }, [])
 
   const handleClearChat = useCallback(() => {
@@ -203,6 +214,8 @@ export default function App() {
           validationData={validationData}
           stage={stage}
           voice={voice}
+          editSectionPrompt={editSectionPrompt}
+          onEditSectionConsumed={() => setEditSectionPrompt(null)}
         />
 
         {showPreviewPanel && (
@@ -226,6 +239,8 @@ export default function App() {
               if (cfg) handleTemplateConfigChange(key, cfg)
             }}
             onConfigChange={(cfg) => handleTemplateConfigChange(activeTemplate, cfg)}
+            onEditSection={(prompt) => setEditSectionPrompt(prompt)}
+            onSectionEdit={handleSectionEdit}
           />
           </ErrorBoundary>
         )}

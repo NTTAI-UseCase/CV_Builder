@@ -81,13 +81,14 @@ class CVData(BaseModel):
     # Meta
     target_role: Optional[str] = None
     target_industry: Optional[str] = None
+    selected_template: str = "professional"   # persisted through API calls
 
     def completion_pct(self) -> int:
         """Return 0-100 completeness score used by Validation Agent."""
         required = [
             self.full_name, self.email, self.headline,
             self.professional_summary,
-            bool(self.work_experience), bool(self.skills),
+            bool(self.work_experience), bool(self.education), bool(self.skills),
         ]
         filled = sum(1 for f in required if f)
         return int((filled / len(required)) * 100)
@@ -99,6 +100,7 @@ class CVData(BaseModel):
         if not self.headline: missing.append("professional headline / job title")
         if not self.professional_summary: missing.append("professional summary")
         if not self.work_experience: missing.append("at least one work experience entry")
+        if not self.education: missing.append("at least one education entry")
         if not self.skills: missing.append("skills list")
         return missing
 
