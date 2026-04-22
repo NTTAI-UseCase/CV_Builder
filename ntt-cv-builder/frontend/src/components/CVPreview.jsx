@@ -7,28 +7,11 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { downloadPDF, downloadDOCX, triggerDownload, getPreview } from '../lib/api.js'
 import { TEMPLATES, TEMPLATE_DEFAULTS } from '../lib/templateDefaults.js'
 import SectionEditModal from './SectionEditModal.jsx'
+import ShortlistModal from './ShortlistModal.jsx'
 
 // ── Per-template visual identity used in the selector cards ─────────────────
 // Cards render on a forced white doc-background so fonts/colours always show.
 const TEMPLATE_VISUAL_META = {
-  professional: {
-    accent: '#008B6E',
-    font: "'Calibri','Segoe UI',Arial,sans-serif",
-    nameSize: 8, nameWeight: 700, nameColor: '#1a2035',
-    sublineColor: '#008B6E',
-    headerBorder: '2px solid #008B6E',
-    layout: 'single',
-    sidebarBg: null,
-  },
-  modern: {
-    accent: '#00e5a0',
-    font: "'Trebuchet MS','Verdana',sans-serif",
-    nameSize: 7.5, nameWeight: 700, nameColor: '#ffffff',
-    sublineColor: '#00e5a0',
-    headerBorder: 'none',
-    layout: 'sidebar',
-    sidebarBg: '#0f172a',      // dark navy sidebar like the real template
-  },
   minimal: {
     accent: '#444',
     font: "Georgia,'Times New Roman',serif",
@@ -47,6 +30,15 @@ const TEMPLATE_VISUAL_META = {
     layout: 'sidebar',
     sidebarBg: '#1a1f2e',      // dark sidebar like executive template
   },
+  postcard: {
+    accent: '#1b2a5e',
+    font: "'Segoe UI',Calibri,Arial,sans-serif",
+    nameSize: 7.5, nameWeight: 700, nameColor: '#1b2a5e',
+    sublineColor: '#4a5568',
+    headerBorder: '2px solid #1b2a5e',
+    layout: 'postcard',
+    sidebarBg: '#1b2a5e',
+  },
 }
 
 // ── Customise panel ──────────────────────────────────────────────────────────
@@ -58,6 +50,7 @@ const SECTION_TOGGLES = [
   { key: 'show_certifications', label: 'Certifications' },
   { key: 'show_languages',      label: 'Languages' },
   { key: 'show_achievements',   label: 'Achievements' },
+  { key: 'show_projects',       label: 'Projects' },
 ]
 
 function CustomisePanel({ template, config, onChange }) {
@@ -94,24 +87,6 @@ function CustomisePanel({ template, config, onChange }) {
       <div style={{ width: 1, height: 20, background: 'var(--border2)', flexShrink: 0 }} />
 
       {/* Template-specific controls */}
-      {(template === 'professional') && (
-        <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--text2)' }}>
-          Accent colour
-          <input type="color" value={config.accent_color || '#008B6E'}
-            onChange={e => toggle('accent_color', e.target.value)}
-            style={{ width: 28, height: 22, border: 'none', cursor: 'pointer', background: 'none', padding: 0 }} />
-        </label>
-      )}
-
-      {template === 'modern' && (
-        <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, cursor: 'pointer', color: 'var(--text2)', userSelect: 'none' }}>
-          <input type="checkbox" checked={!!config.show_skill_bars}
-            onChange={e => toggle('show_skill_bars', e.target.checked)}
-            style={{ accentColor: 'var(--teal)', cursor: 'pointer' }} />
-          Skill bars
-        </label>
-      )}
-
       {template === 'minimal' && (
         <>
           <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, cursor: 'pointer', color: 'var(--text2)', userSelect: 'none' }}>
@@ -254,11 +229,11 @@ const CV_SECTIONS = [
   { key: 'achievements', label: 'Achievements', required: false, prompt: 'I want to update my achievements', addPrompt: 'I want to add my achievements', done: (cv) => (cv?.achievements?.length || 0) > 0 },
 ]
 
-export default function CVPreview({ cvData, previewHtml, templateConfig, initialTemplate, customTemplates = [], onTemplateChange, onConfigChange, onEditSection, onSectionEdit }) {
+export default function CVPreview({ cvData, previewHtml, templateConfig, templateConfigs, initialTemplate, customTemplates = [], onTemplateChange, onConfigChange, onEditSection, onSectionEdit }) {
   const iframeRef = useRef(null)
   const allTemplates = [...TEMPLATES, ...customTemplates]
-  const [activeTemplate, setActiveTemplate] = useState(initialTemplate || cvData?.selected_template || 'professional')
-  const [localConfig, setLocalConfig] = useState(() => templateConfig || TEMPLATE_DEFAULTS[initialTemplate || cvData?.selected_template || 'professional'])
+  const [activeTemplate, setActiveTemplate] = useState(initialTemplate || cvData?.selected_template || 'minimal')
+  const [localConfig, setLocalConfig] = useState(() => templateConfig || TEMPLATE_DEFAULTS[initialTemplate || cvData?.selected_template || 'minimal'])
   // Track previous initialTemplate so we can detect external changes (e.g. voice selection)
   const prevInitialTemplateRef = useRef(initialTemplate)
 
@@ -270,6 +245,7 @@ export default function CVPreview({ cvData, previewHtml, templateConfig, initial
   const [loadingPreview, setLoadingPreview] = useState(false)
   const [localHtml, setLocalHtml] = useState(previewHtml)
   const [editingSection, setEditingSection] = useState(null)
+  const [shortlistOpen, setShortlistOpen] = useState(false)
   const [dlStatus, setDlStatus] = useState({ pdf: 'idle', docx: 'idle' })
   const debounceRef = useRef(null)
   const autoPreviewRef = useRef(null)
@@ -307,9 +283,9 @@ export default function CVPreview({ cvData, previewHtml, templateConfig, initial
     }
   }, [getBaseKey])
 
-  // Sync external previewHtml (from orchestrator pipeline)
+  // Sync external previewHtml — null means a new upload cleared it, so reset localHtml too
   useEffect(() => {
-    if (previewHtml) setLocalHtml(previewHtml)
+    setLocalHtml(previewHtml ?? null)
   }, [previewHtml])
 
   // Sync template when parent forces a change from outside (e.g. AI voice selection)
@@ -367,12 +343,14 @@ export default function CVPreview({ cvData, previewHtml, templateConfig, initial
   }, [])
 
   const handleTemplateChange = useCallback((key) => {
-    const newCfg = TEMPLATE_DEFAULTS[getBaseKey(key)]
+    const baseKey = getBaseKey(key)
+    // Prefer previously saved config for this template over bare defaults
+    const newCfg = templateConfigs?.[key] ?? templateConfigs?.[baseKey] ?? TEMPLATE_DEFAULTS[baseKey]
     setActiveTemplate(key)
     setLocalConfig(newCfg)
-    onTemplateChange?.(key, newCfg)
+    onTemplateChange?.(key)   // notify parent of key change only; parent already holds saved config
     fetchPreview(cvData, key, newCfg)
-  }, [cvData, fetchPreview, getBaseKey, onTemplateChange])
+  }, [cvData, fetchPreview, getBaseKey, onTemplateChange, templateConfigs])
 
   const handleConfigChange = useCallback((key, value) => {
     const newCfg = { ...localConfig, [key]: value }
@@ -429,6 +407,25 @@ export default function CVPreview({ cvData, previewHtml, templateConfig, initial
             {completion === 100 ? '✓ Ready to generate' : `${missingCount} field${missingCount !== 1 ? 's' : ''} remaining`}
           </div>
         </div>
+        {/* Shortlist button — always shown once a CV exists */}
+        {cvData?.full_name && (
+          <button
+            onClick={() => setShortlistOpen(true)}
+            title="Skillset Filter — check this CV against a skill set"
+            style={{
+              display: 'flex', alignItems: 'center', gap: 5,
+              padding: '5px 11px', borderRadius: 7,
+              border: '1px solid var(--teal)',
+              background: 'rgba(0,139,110,0.08)',
+              color: 'var(--teal)',
+              fontSize: 11.5, fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            🎯 Smart Search
+          </button>
+        )}
+
         {/* Download buttons */}
         {cvData && localHtml && (
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
@@ -500,6 +497,7 @@ export default function CVPreview({ cvData, previewHtml, templateConfig, initial
           const isActive = activeTemplate === t.key
           const m = TEMPLATE_VISUAL_META[t.key] || {}
           const isSidebar = m.layout === 'sidebar'
+          const isPostcard = m.layout === 'postcard'
           return (
             <button key={t.key} onClick={() => handleTemplateChange(t.key)}
               title={t.label}
@@ -520,7 +518,18 @@ export default function CVPreview({ cvData, previewHtml, templateConfig, initial
               <div style={{ background: '#fff', fontFamily: m.font }}>
 
                 {/* Header */}
-                {isSidebar ? (
+                {isPostcard ? (
+                  /* Postcard: light header band + geo blocks */
+                  <div style={{ background: '#f4f6f9', borderBottom: `2px solid ${m.accent}`, padding: '5px 6px 4px' }}>
+                    <div style={{ fontSize: m.nameSize, fontWeight: m.nameWeight, color: m.nameColor, lineHeight: 1.1 }}>Full Name</div>
+                    <div style={{ fontSize: 5, color: m.sublineColor, marginTop: 1, fontStyle: 'italic' }}>Senior Manager</div>
+                    <div style={{ display: 'flex', gap: 2, marginTop: 4 }}>
+                      {['#e63946','#2a9d8f','#f4a261','#1b2a5e'].map((c, i) => (
+                        <div key={i} style={{ width: i === 3 ? 4 : 4, height: i === 3 ? 8 : 4, background: c, borderRadius: 1 }} />
+                      ))}
+                    </div>
+                  </div>
+                ) : isSidebar ? (
                   /* Modern / Executive: left sidebar + main */
                   <div style={{ display: 'flex', height: 42 }}>
                     <div style={{
@@ -542,7 +551,7 @@ export default function CVPreview({ cvData, previewHtml, templateConfig, initial
                   /* Professional / Minimal: single-column header */
                   <div style={{ padding: '6px 7px 4px', borderBottom: m.headerBorder }}>
                     <div style={{ fontSize: m.nameSize, fontWeight: m.nameWeight, color: m.nameColor, letterSpacing: '-0.2px' }}>Full Name</div>
-                    <div style={{ fontSize: 6, color: m.sublineColor, marginTop: 1, fontStyle: m.layout === 'minimal' ? 'normal' : 'normal' }}>Senior Manager · email@nttdata.com</div>
+                    <div style={{ fontSize: 6, color: m.sublineColor, marginTop: 1 }}>Senior Manager · email@nttdata.com</div>
                   </div>
                 )}
 
@@ -562,6 +571,14 @@ export default function CVPreview({ cvData, previewHtml, templateConfig, initial
                       <div key={i} style={{ height: 2, width: `${w}%`, background: '#d0d0d0', borderRadius: 1 }} />
                     ))}
                   </div>
+                  {isPostcard && (
+                    <div style={{ width: 22, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 2, paddingTop: 1 }}>
+                      <div style={{ height: 2.5, background: m.accent, borderRadius: 1, width: '100%' }} />
+                      {[85, 70, 90, 65].map((w, i) => (
+                        <div key={i} style={{ height: 2, background: `${m.accent}cc`, borderRadius: 1, width: `${w}%` }} />
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -604,6 +621,14 @@ export default function CVPreview({ cvData, previewHtml, templateConfig, initial
             setEditingSection(null)
           }}
           onClose={() => setEditingSection(null)}
+        />
+      )}
+
+      {/* ── Skill shortlist modal ── */}
+      {shortlistOpen && cvData && (
+        <ShortlistModal
+          cvData={cvData}
+          onClose={() => setShortlistOpen(false)}
         />
       )}
     </div>

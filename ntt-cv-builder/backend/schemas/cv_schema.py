@@ -113,7 +113,7 @@ class CVData(BaseModel):
     # Meta
     target_role: Optional[str] = None      # "Senior Software Engineer"
     target_industry: Optional[str] = None  # "Technology"
-    selected_template: str = "professional"  # template key
+    selected_template: str = "minimal"  # template key
 
     def completion_percentage(self) -> int:
         """Returns how complete the CV is as a percentage."""

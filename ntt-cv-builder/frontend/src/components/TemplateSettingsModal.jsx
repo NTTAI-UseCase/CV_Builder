@@ -16,13 +16,13 @@ const SECTIONS = [
   { key: 'show_languages',      label: 'Languages' },
   { key: 'show_achievements',   label: 'Key Achievements' },
   { key: 'show_awards',         label: 'Awards & Recognition' },
+  { key: 'show_projects',       label: 'Projects' },
 ]
 
 const BASE_DESCRIPTIONS = {
-  professional: 'Single-column corporate layout with Inter font. Configurable accent colour and full section control.',
-  modern:       'Two-column layout with a dark sidebar. Skills shown as bars or tags. Space Grotesk font.',
-  minimal:      'Clean Georgia serif, monochrome. Best for academic or content-first CVs. Adjustable font size.',
-  executive:    'Premium two-column with gold accents and a prominent achievements callout. EB Garamond headings.',
+  minimal:   'Clean Georgia serif, monochrome. Best for academic or content-first CVs. Adjustable font size.',
+  executive: 'Premium two-column with gold accents, achievements callout, and Projects section. EB Garamond headings.',
+  postcard:  'NTT-branded profile card with decorative geometry and a two-column layout.',
 }
 
 function Toggle({ checked, onChange, label }) {
@@ -107,32 +107,6 @@ function TemplateTab({ templateKey, baseKey, config, onChange, customLabel, cust
         Style Options
       </div>
 
-      {effectiveBase === 'professional' && (
-        <div style={{
-          padding: '10px 14px', borderRadius: 8,
-          background: 'var(--surface3)', border: '1px solid var(--border)',
-          display: 'flex', alignItems: 'center', gap: 12,
-        }}>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--text)', marginBottom: 2 }}>Accent Colour</div>
-            <div style={{ fontSize: 11, color: 'var(--text3)' }}>Applied to section titles and header border</div>
-          </div>
-          <input type="color"
-            value={config.accent_color || '#008B6E'}
-            onChange={e => onChange('accent_color', e.target.value)}
-            style={{ width: 40, height: 32, border: '1px solid var(--border2)', borderRadius: 6, cursor: 'pointer', background: 'none', padding: 2 }}
-          />
-        </div>
-      )}
-
-      {effectiveBase === 'modern' && (
-        <Toggle
-          checked={!!config.show_skill_bars}
-          label="Show skill level bars in sidebar"
-          onChange={() => onChange('show_skill_bars', !config.show_skill_bars)}
-        />
-      )}
-
       {effectiveBase === 'minimal' && (
         <>
           <Toggle
@@ -168,7 +142,7 @@ function TemplateTab({ templateKey, baseKey, config, onChange, customLabel, cust
         />
       )}
 
-      {!['professional', 'modern', 'minimal', 'executive'].includes(effectiveBase) && (
+      {!['minimal', 'executive', 'postcard'].includes(effectiveBase) && (
         <div style={{ fontSize: 12, color: 'var(--text3)', padding: '8px 12px', borderRadius: 8, background: 'var(--surface3)', border: '1px solid var(--border)' }}>
           No additional style options for this template.
         </div>
@@ -180,7 +154,7 @@ function TemplateTab({ templateKey, baseKey, config, onChange, customLabel, cust
 function AddTemplateForm({ onAdd, onCancel }) {
   const [name, setName] = useState('')
   const [desc, setDesc] = useState('')
-  const [baseKey, setBaseKey] = useState('professional')
+  const [baseKey, setBaseKey] = useState('minimal')
   const [error, setError] = useState('')
 
   const handleSubmit = (e) => {
@@ -301,7 +275,7 @@ function AddTemplateForm({ onAdd, onCancel }) {
 }
 
 export default function TemplateSettingsModal({ open, onClose, configs, onConfigChange, customTemplates = [], onAddTemplate, onDeleteTemplate }) {
-  const [activeTab, setActiveTab] = useState('professional')
+  const [activeTab, setActiveTab] = useState('minimal')
   const [showAddForm, setShowAddForm] = useState(false)
 
   // Close on Escape
@@ -316,7 +290,7 @@ export default function TemplateSettingsModal({ open, onClose, configs, onConfig
   useEffect(() => {
     if (!open) return
     const allKeys = [...TEMPLATES.map(t => t.key), ...customTemplates.map(t => t.key)]
-    if (!allKeys.includes(activeTab)) setActiveTab('professional')
+    if (!allKeys.includes(activeTab)) setActiveTab('minimal')
   }, [customTemplates, activeTab, open])
 
   if (!open) return null
@@ -339,7 +313,7 @@ export default function TemplateSettingsModal({ open, onClose, configs, onConfig
 
   const handleDelete = (key) => {
     onDeleteTemplate?.(key)
-    setActiveTab('professional')
+    setActiveTab('minimal')
   }
 
   const allTabs = [...TEMPLATES, ...customTemplates]

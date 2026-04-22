@@ -50,7 +50,7 @@ _EDIT_OVERLAY = """
 
 # NTT Data logo for watermark — resolved relative to this file so it works
 # regardless of the working directory.
-_LOGO_PATH = Path(__file__).parent.parent.parent / "frontend" / "public" / "ntt-data-logo.png"
+_LOGO_PATH = Path(__file__).parent.parent.parent / "frontend" / "public" / "ntt-data.png"
 
 def _ntt_logo_data_uri() -> str:
     """Return a base64 data URI for the NTT logo, or empty string if missing."""
@@ -135,6 +135,17 @@ def _adapt(cv) -> SimpleNamespace:
             date_obtained=getattr(c, "date", None),
         ))
 
+    # Projects
+    projects = []
+    for p in (getattr(cv, "projects", None) or []):
+        projects.append(SimpleNamespace(
+            name=getattr(p, "name", str(p)),
+            description=getattr(p, "description", None),
+            url=getattr(p, "url", None),
+            technologies=getattr(p, "technologies", []) or [],
+            bullet_points=getattr(p, "bullets", []) or [],
+        ))
+
     return SimpleNamespace(
         contact=contact,
         professional_summary=cv.professional_summary,
@@ -147,7 +158,8 @@ def _adapt(cv) -> SimpleNamespace:
         certifications=certifications,
         achievements=getattr(cv, "achievements", []) or [],
         awards=getattr(cv, "awards", []) or [],
-        selected_template=getattr(cv, "selected_template", "professional"),
+        projects=projects,
+        selected_template=getattr(cv, "selected_template", "minimal"),
     )
 
 
@@ -161,7 +173,7 @@ def render_html_preview(cv, config: TemplateConfig | None = None, _preview_mode:
     env = _get_jinja_env()
     template_name = f"{adapted.selected_template}.html"
     if not (TEMPLATES_DIR / template_name).exists():
-        template_name = "professional.html"
+        template_name = "minimal.html"
     template = env.get_template(template_name)
     cfg = config or TemplateConfig()
     show = {
@@ -173,6 +185,7 @@ def render_html_preview(cv, config: TemplateConfig | None = None, _preview_mode:
         "languages":      cfg.show_languages,
         "achievements":   cfg.show_achievements,
         "awards":         cfg.show_awards,
+        "projects":       cfg.show_projects,
     }
     html = template.render(cv=adapted, show=show, config=cfg.model_dump(), ntt_logo=_ntt_logo_data_uri())
     if _preview_mode:

@@ -5,25 +5,12 @@
  */
 
 export const TEMPLATES = [
-  { key: 'professional', label: 'Professional', desc: 'Classic corporate' },
-  { key: 'modern',       label: 'Modern',       desc: 'Bold teal accents' },
-  { key: 'minimal',      label: 'Minimal',      desc: 'Clean serif' },
-  { key: 'executive',    label: 'Executive',    desc: 'Two-column senior' },
+  { key: 'minimal',  label: 'Simple',       desc: 'Clean serif' },
+  { key: 'postcard', label: 'Postcard',      desc: 'NTT profile card' },
+  { key: 'executive',label: 'Professional',  desc: 'Two-column senior' },
 ]
 
 export const TEMPLATE_DEFAULTS = {
-  professional: {
-    show_summary: true, show_experience: true, show_education: true,
-    show_skills: true, show_certifications: true, show_languages: true,
-    show_achievements: true, show_awards: true,
-    accent_color: '#008B6E',
-  },
-  modern: {
-    show_summary: true, show_experience: true, show_education: true,
-    show_skills: true, show_certifications: true, show_languages: true,
-    show_achievements: true, show_awards: true,
-    show_skill_bars: true,
-  },
   minimal: {
     show_summary: true, show_experience: true, show_education: true,
     show_skills: true, show_certifications: false, show_languages: false,
@@ -34,7 +21,13 @@ export const TEMPLATE_DEFAULTS = {
   executive: {
     show_summary: true, show_experience: true, show_education: true,
     show_skills: true, show_certifications: true, show_languages: true,
-    show_achievements: true, show_awards: true,
+    show_achievements: true, show_awards: true, show_projects: true,
     sidebar_dark: true,
+  },
+  postcard: {
+    show_summary: true, show_experience: true, show_education: true,
+    show_skills: true, show_certifications: true, show_languages: true,
+    show_achievements: true, show_awards: false,
+    show_photo: false,
   },
 }

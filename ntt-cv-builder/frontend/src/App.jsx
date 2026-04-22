@@ -27,7 +27,7 @@ export default function App() {
   const [theme, setTheme] = useState(() => sessionStorage.getItem('cv_theme') || 'light')
   const [customiseOpen, setCustomiseOpen] = useState(false)
   const [templateConfigs, setTemplateConfigs] = useState({ ...TEMPLATE_DEFAULTS })
-  const [activeTemplate, setActiveTemplate] = useState('professional')
+  const [activeTemplate, setActiveTemplate] = useState('minimal')
   const [customTemplates, setCustomTemplates] = useState([])
   const [editSectionPrompt, setEditSectionPrompt] = useState(null)
   const voice = useVoice()
@@ -134,9 +134,11 @@ export default function App() {
   }, [connected, send])
 
   const handleUploadComplete = useCallback(() => {
-    // The backend will send cv_update + message events over the WebSocket.
-    // Just show the thinking indicator so the user knows processing is in progress.
+    // Clear stale CV state so the preview panel resets while the new CV loads.
+    // The backend will send cv_update + preview events over WebSocket to repopulate.
     setIsThinking(true)
+    setCvData(null)
+    setPreviewHtml(null)
   }, [])
 
   // Handle inline section edits from the CV preview modal — patch is a partial cvData object
@@ -154,6 +156,26 @@ export default function App() {
   const handleNewChat = useCallback(() => {
     sessionStorage.removeItem('cv_session_id')
     window.location.reload()
+  }, [])
+
+  const handleNewUpload = useCallback(async () => {
+    try {
+      const id = await createSession()
+      sessionStorage.setItem('cv_session_id', id)
+      // Reset all CV + chat state before switching session so nothing lingers
+      setMessages([])
+      setCvData(null)
+      setPreviewHtml(null)
+      setDownloads(null)
+      setStage('greeting')
+      setIsThinking(false)
+      setProgress(null)
+      setValidationData(null)
+      // Changing sessionId triggers useWebSocket to reconnect with the new session
+      setSessionId(id)
+    } catch (err) {
+      console.error('New upload session failed', err)
+    }
   }, [])
 
   const showPreviewPanel = previewHtml || downloads || cvData?.full_name || (cvData && stage !== 'greeting')
@@ -174,7 +196,7 @@ export default function App() {
       delete next[key]
       return next
     })
-    setActiveTemplate(prev => (prev === key ? 'professional' : prev))
+    setActiveTemplate(prev => (prev === key ? 'minimal' : prev))
   }, [])
 
   return (
@@ -210,7 +232,7 @@ export default function App() {
           onSend={sendMessage}
           onUploadComplete={handleUploadComplete}
           onClearChat={handleClearChat}
-          onNewChat={handleNewChat}
+          onNewChat={handleNewUpload}
           validationData={validationData}
           stage={stage}
           voice={voice}

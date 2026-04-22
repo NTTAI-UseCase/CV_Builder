@@ -19,6 +19,7 @@ import truststore
 
 from config import get_settings
 from routers import chat, upload, export
+from routers import shortlist
 
 settings = get_settings()
 
@@ -71,7 +72,7 @@ app.add_middleware(
 app.include_router(chat.router, prefix="/api", tags=["chat"])
 app.include_router(upload.router, prefix="/api", tags=["upload"])
 app.include_router(export.router, prefix="/api", tags=["export"])
-
+app.include_router(shortlist.router, prefix="/api", tags=["shortlist"])
 
 # ── Health check ─────────────────────────────────────────────
 @app.get("/health")

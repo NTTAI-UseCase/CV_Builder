@@ -65,6 +65,20 @@ export async function getPreview(cvData, templateConfig = {}) {
   return data.html
 }
 
+/** Run CV skill shortlisting — returns { results, recommendation } */
+export async function shortlistCV(cvData, skills) {
+  const res = await fetch(`${API_BASE}/shortlist`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ cv: cvData, skills }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: 'Shortlist failed' }))
+    throw new Error(err.detail || 'Shortlist failed')
+  }
+  return res.json()
+}
+
 /** Trigger a file download in the browser */
 export function triggerDownload(blob, filename) {
   const url = URL.createObjectURL(blob)

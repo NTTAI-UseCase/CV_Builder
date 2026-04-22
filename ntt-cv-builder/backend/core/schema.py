@@ -54,6 +54,14 @@ class Certification(BaseModel):
     credential_id: Optional[str] = None
 
 
+class Project(BaseModel):
+    name: str
+    description: Optional[str] = None
+    url: Optional[str] = None
+    technologies: List[str] = Field(default_factory=list)
+    bullets: List[str] = Field(default_factory=list)
+
+
 class CVData(BaseModel):
     """Canonical CV schema. Populated incrementally by agents."""
     # Personal
@@ -77,11 +85,12 @@ class CVData(BaseModel):
     languages: List[str] = Field(default_factory=list)
     achievements: List[str] = Field(default_factory=list)
     awards: List[str] = Field(default_factory=list)
+    projects: List[Project] = Field(default_factory=list)
 
     # Meta
     target_role: Optional[str] = None
     target_industry: Optional[str] = None
-    selected_template: str = "professional"   # persisted through API calls
+    selected_template: str = "minimal"   # persisted through API calls
 
     def completion_pct(self) -> int:
         """Return 0-100 completeness score used by Validation Agent."""
@@ -118,6 +127,7 @@ class TemplateConfig(BaseModel):
     show_languages: bool = True
     show_achievements: bool = True
     show_awards: bool = True
+    show_projects: bool = True
     # Shared style
     accent_color: Optional[str] = None        # e.g. "#008B6E"
     # Modern
@@ -143,7 +153,7 @@ class CVSession(BaseModel):
     stage: ConversationStage = ConversationStage.GREETING
     cv_data: CVData = Field(default_factory=CVData)
     messages: List[Message] = Field(default_factory=list)
-    selected_template: str = "modern"
+    selected_template: str = "minimal"
     generated_pdf_path: Optional[str] = None
     generated_docx_path: Optional[str] = None
     upload_processed: bool = False

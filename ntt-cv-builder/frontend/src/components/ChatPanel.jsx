@@ -248,14 +248,14 @@ export default function ChatPanel({
           </button>
           <button
             onClick={onNewChat}
-            title="Start a completely new session"
+            title="Clear everything and start a fresh session"
             style={{
               flex: 1, padding: '5px 10px', borderRadius: 7, fontSize: 11, fontWeight: 600,
               background: 'var(--surface2)', border: '1px solid var(--border2)',
               color: 'var(--text2)', cursor: 'pointer',
             }}
           >
-            ＋ New Chat
+            ＋ New Chat / Upload
           </button>
         </div>
       </div>

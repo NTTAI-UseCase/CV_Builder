@@ -28,7 +28,7 @@ A fully conversational, AI-powered CV builder built with Python, FastAPI, the Op
 
 ```bash
 git clone <repo-url>
-cd contoso-cv-builder
+cd ntt-cv-builder
 cp .env.example .env
 # Set:  OPENAI_API_KEY=sk-...
 ```
@@ -69,7 +69,7 @@ cd ../backend && uvicorn main:app --host 0.0.0.0 --port 8000
 ## Project Structure
 
 ```
-contoso-cv-builder/
+ntt-cv-builder/
 ├── backend/
 │   ├── main.py                  # FastAPI app + CORS + lifespan
 │   ├── config.py                # pydantic-settings from .env

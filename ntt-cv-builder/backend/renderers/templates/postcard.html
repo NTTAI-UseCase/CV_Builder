@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', Calibri, Arial, sans-serif;
+    font-size: 9.5pt;
+    color: #2c3e50;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
+  /* ── NAME BANNER — spans full width including sidebar column ── */
+  .pc-name-bar {
+    padding: 28px 36px 16px;
+    border-bottom: 3px solid #1b2a5e;
+    flex-shrink: 0;
+  }
+
+  .pc-name {
+    font-size: 26pt;
+    font-weight: 700;
+    color: #1b2a5e;
+    letter-spacing: -0.5px;
+    line-height: 1.1;
+  }
+
+  /* ── TWO-COLUMN ROW (starts below the name banner border) ── */
+  .pc-content-row {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+  }
+
+  /* ── MAIN COLUMN ── */
+  .pc-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  /* Role line — first item in main, below the name border */
+  .pc-role-area {
+    padding: 10px 36px 14px;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .pc-role {
+    font-size: 11pt;
+    font-style: italic;
+    color: #4a5568;
+  }
+
+  /* Body: bio + experience bullets */
+  .pc-body {
+    flex: 1;
+    padding: 20px 36px 16px;
+  }
+
+  .pc-bio-para {
+    color: #374151;
+    line-height: 1.65;
+    font-size: 9.5pt;
+    margin-bottom: 10px;
+  }
+
+  .pc-bio-para strong { color: #1b2a5e; }
+
+  .pc-exp-role-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+
+  .pc-exp-role-title {
+    font-size: 10pt;
+    font-weight: 700;
+    color: #1b2a5e;
+  }
+
+  .pc-exp-role-dates {
+    font-size: 8pt;
+    color: #718096;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .pc-exp-role-company {
+    font-size: 9pt;
+    color: #718096;
+    margin-bottom: 6px;
+    font-style: italic;
+  }
+
+  .pc-bullets {
+    list-style: none;
+    padding-left: 0;
+    margin-bottom: 10px;
+  }
+
+  .pc-bullets li {
+    position: relative;
+    padding-left: 16px;
+    margin-bottom: 3px;
+    color: #374151;
+    line-height: 1.5;
+    font-size: 9.5pt;
+  }
+
+  .pc-bullets li::before {
+    content: '\00BB';
+    position: absolute;
+    left: 0;
+    color: #1b2a5e;
+    font-weight: 700;
+  }
+
+  /* Geo blocks strip at bottom of main */
+  .pc-geo-strip {
+    display: flex;
+    align-items: flex-end;
+    height: 48px;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  .pc-geo-block { flex-shrink: 0; }
+
+  /* ── SIDEBAR — starts immediately at the name-bar border (no gap) ── */
+  .pc-sidebar {
+    width: 230px;
+    flex-shrink: 0;
+    background: #fff;
+    border-left: 1px solid #e2e8f0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .pc-sidebar-box { margin-bottom: 2px; }
+
+  .pc-sidebar-heading {
+    background: #1b2a5e;
+    color: #fff;
+    font-size: 8pt;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    padding: 8px 16px;
+  }
+
+  .pc-sidebar-content { padding: 10px 16px 8px; }
+
+  .pc-sidebar-item {
+    font-size: 8.5pt;
+    color: #374151;
+    margin-bottom: 5px;
+    padding-left: 12px;
+    position: relative;
+    line-height: 1.4;
+  }
+
+  .pc-sidebar-item::before {
+    content: '\2022';
+    position: absolute;
+    left: 0;
+    color: #1b2a5e;
+  }
+
+  /* ── FOOTER BAR ── */
+  .pc-footer {
+    background: #1b2a5e;
+    color: #a0aec0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 28px;
+    font-size: 7.5pt;
+    flex-shrink: 0;
+  }
+
+  .pc-footer-logo img {
+    height: 22px;
+    width: auto;
+    filter: brightness(0) invert(1);
+    opacity: 0.85;
+  }
+
+  .ntt-watermark {
+    position: fixed; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    opacity: 0.05; pointer-events: none; z-index: 0;
+  }
+  .ntt-watermark img { width: 360px; height: auto; display: block; }
+</style>
+</head>
+<body>
+
+<!-- ── NAME BANNER (full width, above both columns) ── -->
+<div class="pc-name-bar">
+  <div data-section="contact">
+    <div class="pc-name">{{ cv.contact.full_name or 'Your Name' }}</div>
+  </div>
+</div>
+
+<!-- ── TWO-COLUMN ROW ── -->
+<div class="pc-content-row">
+
+  <!-- MAIN COLUMN -->
+  <div class="pc-main">
+
+    <!-- Role line (first item below the name border) -->
+    <div class="pc-role-area" data-section="contact">
+      {% if cv.headline or cv.target_role %}
+      <div class="pc-role">{{ cv.headline or cv.target_role }}</div>
+      {% endif %}
+    </div>
+
+    <!-- Body content -->
+    <div class="pc-body">
+
+      {% if show.summary and cv.professional_summary %}
+      <div data-section="summary">
+        {% for para in cv.professional_summary.split('\n\n') %}
+        <p class="pc-bio-para">{{ para }}</p>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% if show.experience and cv.work_experience %}
+      <div data-section="experience">
+        {% set ns = namespace(total=0) %}
+        {% for role in cv.work_experience %}
+        {% if role.bullet_points and ns.total < 10 %}
+        <div class="pc-exp-role-header">
+          <span class="pc-exp-role-title">{{ role.job_title or '' }}</span>
+          {% if role.start_date %}
+          <span class="pc-exp-role-dates">{{ role.start_date }} – {{ 'Present' if role.is_current else (role.end_date or '') }}</span>
+          {% endif %}
+        </div>
+        <div class="pc-exp-role-company">{{ role.company }}{% if role.location %} · {{ role.location }}{% endif %}</div>
+        <ul class="pc-bullets">
+          {% for b in role.bullet_points %}{% if ns.total < 10 %}<li>{{ b }}</li>{% set ns.total = ns.total + 1 %}{% endif %}{% endfor %}
+        </ul>
+        {% endif %}
+        {% endfor %}
+      </div>
+      {% endif %}
+
+    </div>
+
+    <!-- Geo strip at bottom of main -->
+    <div class="pc-geo-strip">
+      <div class="pc-geo-block" style="width:38px;height:38px;background:#e63946;"></div>
+      <div class="pc-geo-block" style="width:24px;height:24px;background:#f4a261;align-self:flex-end;"></div>
+      <div class="pc-geo-block" style="width:20px;height:20px;background:#e9c46a;align-self:flex-end;"></div>
+      <div class="pc-geo-block" style="width:44px;height:44px;background:#2a9d8f;"></div>
+      <div class="pc-geo-block" style="width:20px;height:48px;background:#1b2a5e;"></div>
+      <div class="pc-geo-block" style="width:36px;height:24px;background:#264653;align-self:flex-end;"></div>
+      <div class="pc-geo-block" style="width:16px;height:16px;background:#e76f51;align-self:flex-end;"></div>
+    </div>
+
+  </div><!-- /pc-main -->
+
+  <!-- SIDEBAR — starts right at the name-bar border, no extra offset -->
+  <div class="pc-sidebar">
+
+    {% if show.achievements and cv.achievements %}
+    <div class="pc-sidebar-box" data-section="achievements">
+      <div class="pc-sidebar-heading">Industry Expertise</div>
+      <div class="pc-sidebar-content">
+        {% for a in cv.achievements %}
+        <div class="pc-sidebar-item">{{ a }}</div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    {% if show.certifications and cv.certifications %}
+    <div class="pc-sidebar-box" data-section="certifications">
+      <div class="pc-sidebar-heading">Domain Expertise</div>
+      <div class="pc-sidebar-content">
+        {% for cert in cv.certifications %}
+        <div class="pc-sidebar-item">{{ cert.name }}</div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    {% if show.skills and cv.skills %}
+    <div class="pc-sidebar-box" data-section="skills">
+      <div class="pc-sidebar-heading">Technology Expertise</div>
+      <div class="pc-sidebar-content">
+        {% for skill in cv.skills %}
+        <div class="pc-sidebar-item">{{ skill.name }}</div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    {% if show.languages and cv.languages %}
+    <div class="pc-sidebar-box" data-section="languages">
+      <div class="pc-sidebar-heading">Languages</div>
+      <div class="pc-sidebar-content">
+        {% for lang in cv.languages %}
+        <div class="pc-sidebar-item">{{ lang.language }}{% if lang.proficiency %} — {{ lang.proficiency }}{% endif %}</div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+  </div><!-- /pc-sidebar -->
+
+</div><!-- /pc-content-row -->
+
+<!-- ── FOOTER ── -->
+<div class="pc-footer">
+  <span style="color:#a0b0c8;">© NTT DATA, Inc. All rights reserved.</span>
+  <span></span>
+  {% if ntt_logo %}
+  <div class="pc-footer-logo"><img src="{{ ntt_logo }}" alt="NTT DATA" /></div>
+  {% else %}
+  <span style="color:#5a7aaa;font-weight:700;font-size:9pt;letter-spacing:1px;">NTT DATA</span>
+  {% endif %}
+</div>
+
+{% if ntt_logo %}<div class="ntt-watermark"><img src="{{ ntt_logo }}" alt="NTT Data" /></div>{% endif %}
+</body>
+</html>

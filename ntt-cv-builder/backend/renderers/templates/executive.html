@@ -34,9 +34,12 @@
     font-size: 10pt; font-weight: 700; letter-spacing: 1.5px;
     text-transform: uppercase; color: #1a2035;
     border-bottom: 1.5px solid #c9a84c;
-    padding-bottom: 3px; margin-bottom: 12px; margin-top: 20px;
+    padding-bottom: 3px; margin-bottom: 14px; margin-top: 32px;
   }
   .section-title:first-of-type { margin-top: 0; }
+
+  /* Extra breathing room between main-column sections */
+  [data-section] + [data-section] { margin-top: 10px; }
 
   .summary { color: #374151; line-height: 1.65; }
 
@@ -69,6 +72,21 @@
   .edu-degree { font-weight: 600; font-size: 10pt; }
   .edu-inst { font-size: 9pt; color: #7f8c8d; }
 
+  /* Projects */
+  .project-item { margin-bottom: 14px; }
+  .project-header { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .project-name { font-size: 10.5pt; font-weight: 600; color: #1a2035; }
+  .project-url { font-size: 8pt; color: #7f8c8d; }
+  .project-desc { font-size: 9pt; color: #4a5568; margin: 3px 0 5px; font-style: italic; }
+  .project-tech { display: flex; flex-wrap: wrap; gap: 3px 4px; margin-bottom: 5px; }
+  .project-tech-tag {
+    font-size: 7.5pt; padding: 1px 6px; border-radius: 3px;
+    background: #f5f0e8; border: 1px solid #d4c5a0;
+    color: #5a4a1e;
+  }
+  .project-bullets { padding-left: 14px; }
+  .project-bullets li { margin-bottom: 3px; color: #374151; font-size: 9pt; }
+
   /* ── SIDEBAR ── */
   .sidebar {
     background: {% if config.sidebar_dark %}#1a1f2e{% else %}#faf8f4{% endif %};
@@ -78,28 +96,34 @@
   .sidebar-title {
     font-size: 7.5pt; letter-spacing: 2px; text-transform: uppercase; font-weight: 700;
     color: {% if config.sidebar_dark %}#c9a84c{% else %}#8a6914{% endif %};
-    margin-bottom: 10px; margin-top: 22px;
+    margin-bottom: 10px; margin-top: 0; padding-top: 20px;
+    border-top: 1px solid {% if config.sidebar_dark %}rgba(255,255,255,0.08){% else %}rgba(0,0,0,0.1){% endif %};
   }
-  .sidebar-title:first-child { margin-top: 0; }
+  /* Section wrappers inside sidebar — first one needs no top rule */
+  .sidebar [data-section]:first-child .sidebar-title {
+    border-top: none; padding-top: 0;
+  }
   .sidebar-item {
     font-size: 8.5pt;
     color: {% if config.sidebar_dark %}#cbd5e1{% else %}#4a4a4a{% endif %};
     margin-bottom: 6px; word-break: break-word; line-height: 1.45;
   }
   .skill-tag {
-    display: inline-block; margin: 2px 3px 2px 0;
+    display: inline-block; margin: 2px 3px 4px 0;
     background: {% if config.sidebar_dark %}#2d3548{% else %}#eee8da{% endif %};
     border: 1px solid {% if config.sidebar_dark %}#3d4560{% else %}#d4c5a0{% endif %};
     color: {% if config.sidebar_dark %}#c9a84c{% else %}#5a4a1e{% endif %};
     border-radius: 3px; padding: 1px 7px; font-size: 8pt;
   }
+  /* Ensure sidebar sections have spacing after skill tags */
+  .sidebar [data-section] { margin-bottom: 8px; }
 
   .ntt-watermark {
     position: fixed; top: 50%; left: 50%;
     transform: translate(-50%, -50%);
     opacity: 0.07; pointer-events: none; z-index: 0;
   }
-  .ntt-watermark img { width: 220px; height: auto; display: block; }
+  .ntt-watermark img { width: 360px; height: auto; display: block; }
 </style>
 </head>
 <body>
@@ -156,6 +180,29 @@
     <ul class="callout-list">
       {% for a in cv.awards %}<li>{{ a }}</li>{% endfor %}
     </ul>
+  </div>
+  {% endif %}
+
+  {% if show.projects and cv.projects %}
+  <div data-section="projects">
+    <div class="section-title">Projects</div>
+    {% for proj in cv.projects %}
+    <div class="project-item">
+      <div class="project-header">
+        <span class="project-name">{{ proj.name }}</span>
+        {% if proj.url %}<span class="project-url">{{ proj.url }}</span>{% endif %}
+      </div>
+      {% if proj.description %}<div class="project-desc">{{ proj.description }}</div>{% endif %}
+      {% if proj.technologies %}
+      <div class="project-tech">
+        {% for t in proj.technologies %}<span class="project-tech-tag">{{ t }}</span>{% endfor %}
+      </div>
+      {% endif %}
+      {% if proj.bullet_points %}
+      <ul class="project-bullets">{% for b in proj.bullet_points %}<li>{{ b }}</li>{% endfor %}</ul>
+      {% endif %}
+    </div>
+    {% endfor %}
   </div>
   {% endif %}
 

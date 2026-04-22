@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     # Upload
     max_upload_size_mb: int = 10
 
+    https_proxy: Optional[str] = None
+    http_proxy: Optional[str] = None
+
     # App
     cors_origins: List[str] = ["http://localhost:3000", "http://localhost:8000"]
     log_level: str = "INFO"

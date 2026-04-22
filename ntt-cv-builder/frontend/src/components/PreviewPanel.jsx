@@ -10,7 +10,7 @@ import { TEMPLATE_DEFAULTS } from '../lib/templateDefaults'
 
 export default function PreviewPanel({ cvData, previewHtml, downloads, stage, templateConfigs, activeTemplate: activeTemplateProp, customTemplates, onTemplateChange, onConfigChange, onEditSection, onSectionEdit }) {
   const [dlStatus, setDlStatus] = useState({ pdf: 'idle', docx: 'idle', json: 'idle' })
-  const activeTemplate = activeTemplateProp || 'professional'
+  const activeTemplate = activeTemplateProp || 'minimal'
   const templateConfig = (templateConfigs || TEMPLATE_DEFAULTS)[activeTemplate] || TEMPLATE_DEFAULTS[activeTemplate]
 
   const handleDownload = useCallback(async (type) => {
@@ -68,6 +68,7 @@ export default function PreviewPanel({ cvData, previewHtml, downloads, stage, te
           cvData={cvData}
           previewHtml={previewHtml}
           templateConfig={templateConfig}
+          templateConfigs={templateConfigs}
           initialTemplate={activeTemplate}
           customTemplates={customTemplates}
           onTemplateChange={onTemplateChange}

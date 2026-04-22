@@ -87,6 +87,25 @@ class CVOrchestrator:
             extracted_cv = await extract_cv_from_text(text, self.client, settings.openai_model)
             _log.info("[%s] Extraction done — name=%s", sid, extracted_cv.full_name)
 
+            # Validate that this document looks like a CV
+            has_name = bool(extracted_cv.full_name and extracted_cv.full_name.strip())
+            has_experience = bool(extracted_cv.work_experience)
+            has_education = bool(extracted_cv.education)
+            if not has_name or not (has_experience or has_education):
+                _log.warning(
+                    "[%s] Document does not appear to be a CV (name=%s, exp=%d, edu=%d)",
+                    sid, extracted_cv.full_name, len(extracted_cv.work_experience), len(extracted_cv.education),
+                )
+                msg = (
+                    "⚠️ This document doesn't appear to be a CV or resume. "
+                    "It's missing essential information such as a person's name, "
+                    "work experience, or education history.\n\n"
+                    "Please upload a proper CV or resume document and try again."
+                )
+                self.session.add_message("assistant", msg)
+                await self._push_queue.put({"type": "message", "data": msg})
+                return
+
             # Merge: only fill empty fields, extend lists
             current = self.session.cv_data.model_dump()
             new = extracted_cv.model_dump()
@@ -127,7 +146,7 @@ class CVOrchestrator:
         try:
             from renderers.pdf_renderer import render_html_preview
             _log.info("[%s] Rendering HTML preview (template=%s)", sid,
-                      getattr(self.session.cv_data, "selected_template", "professional"))
+                      getattr(self.session.cv_data, "selected_template", "minimal"))
             html_preview = render_html_preview(self.session.cv_data)
             _log.info("[%s] HTML preview rendered, %d bytes", sid, len(html_preview))
             yield {"type": "preview", "data": html_preview}
